@@ -11,7 +11,7 @@ Before writing anything, read `~/claude/claude-chat-website/CLAUDE.md`. It cover
 
 ## ⚠️ The repo is public
 
-Never commit personal details about the user: names, contact details, addresses, travel plans or where they're staying, health, money, work or family details, or secrets of any kind. Write the page for a general reader. If the page needs personal details to be useful, don't publish it here. Tell the user, and offer another route such as a private artifact or sending the file directly. Before committing, re-read the diff for anything personal.
+This rule is only for this repo. The private notes repo (`~/claude/claude-chats`) can and should record personal details. Here, though, never commit personal details about the user: names, contact details, addresses, travel plans or where they're staying, health, money, work or family details, or secrets of any kind. Write the page for a general reader. If the page needs personal details to be useful, don't publish it here. Tell the user, and offer another route such as a private artifact or sending the file directly. Before committing, re-read the diff for anything personal.
 
 ## Steps
 

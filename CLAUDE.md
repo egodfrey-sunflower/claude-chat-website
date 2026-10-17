@@ -4,7 +4,7 @@ This repo holds web pages Claude makes during chats. It's published with GitHub 
 
 ## ⚠️ This repo is public
 
-Everything committed here is visible to anyone, and stays in git history even after it's deleted. **Don't commit personal details about the user.** That means:
+(This applies only to this repo. The user's separate private notes repo is fine for personal details.) Everything committed here is visible to anyone, and stays in git history even after it's deleted. **Don't commit personal details about the user.** That means:
 
 - No names, email addresses, phone numbers, home or work addresses.
 - No travel plans, dates they'll be away, or where they're staying.
