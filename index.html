@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude chat pages</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1d1d1f; --bg: #fafaf8; --muted: #6b6b70; --line: #e2e2dd; --accent: #b4532a; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #ececec; --bg: #161617; --muted: #9a9aa0; --line: #2c2c2e; --accent: #e08a5f; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 system-ui, -apple-system, sans-serif; }
+  main { max-width: 40rem; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+  p.lede { color: var(--muted); margin: 0 0 2rem; }
+  ul { list-style: none; padding: 0; margin: 0; }
+  li { border-top: 1px solid var(--line); }
+  li:last-child { border-bottom: 1px solid var(--line); }
+  li a { display: flex; justify-content: space-between; gap: 1rem; padding: .9rem 0; color: inherit; text-decoration: none; }
+  li a:hover .title { color: var(--accent); }
+  .date { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--muted); padding: .9rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Claude chat pages</h1>
+  <p class="lede">Pages made with Claude, newest first.</p>
+  <ul>
+    <!-- Add new pages at the top, e.g.:
+    <li><a href="202610/17/page-name.html"><span class="title">Page title</span><span class="date">2026-10-17</span></a></li>
+    -->
+    <li class="empty">Nothing here yet.</li>
+  </ul>
+</main>
+</body>
+</html>
