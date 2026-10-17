@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VAE explorer</title>
+<meta name="description" content="An interactive variational autoencoder trained on handwritten digits, running in your browser.">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f5f4ef; --card: #ffffff; --fg: #1c1c1e; --muted: #6b6b70; --line: #e2e0d8;
+    --accent: #c2410c; --ink: #1c1c1e; --paper: #ffffff;
+    --enc: #e7eef8; --enc-b: #3f6ea5; --dec: #fbeee4; --dec-b: #c2410c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111113; --card: #1b1b1e; --fg: #ececee; --muted: #9b9ba2; --line: #2e2e33;
+      --accent: #fb923c; --ink: #f4f4f5; --paper: #1b1b1e;
+      --enc: #1c2838; --enc-b: #8fb4e3; --dec: #35241a; --dec-b: #fb923c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; -webkit-text-size-adjust: 100%; }
+  main { max-width: 54rem; margin: 0 auto; padding: 2rem 1rem 3rem; }
+  h1, h2 { font-family: ui-serif, Georgia, "Times New Roman", serif; font-weight: 600; letter-spacing: -0.01em; }
+  h1 { font-size: clamp(1.9rem, 6.5vw, 2.7rem); line-height: 1.1; margin: .3rem 0 .7rem; }
+  h2 { font-size: 1.4rem; line-height: 1.25; margin: 0 0 .4rem; }
+  h2 .n { color: var(--accent); margin-right: .35rem; }
+  h3 { font-size: 1rem; margin: 1.4rem 0 .3rem; }
+  p { margin: .55rem 0; }
+  a { color: var(--accent); }
+  .kicker { color: var(--accent); font-size: .78rem; text-transform: uppercase; letter-spacing: .09em; font-weight: 650; margin: 0; }
+  .lede { color: var(--muted); font-size: 1.1rem; margin: 0; max-width: 40rem; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 1.25rem; margin-top: 1.5rem; }
+  .muted { color: var(--muted); }
+  .small { font-size: .86rem; }
+  p .mono { white-space: nowrap; font-size: .92em; }
+  .mono, .stats, .readout, .legend { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  canvas { display: block; }
+  #status { margin-top: 1.5rem; padding: .9rem 1.1rem; border-radius: 12px; border: 1px dashed var(--line); color: var(--muted); }
+
+  /* Latent map */
+  .map-wrap { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
+  @media (min-width: 680px) { .map-wrap { grid-template-columns: minmax(0, 1fr) 12.5rem; align-items: start; } }
+  #map, #mini { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); background: var(--card); }
+  #map { touch-action: none; cursor: crosshair; outline-offset: 3px; }
+  .map-side { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: .8rem 1rem; align-items: start; }
+  @media (min-width: 680px) { .map-side { grid-template-columns: 1fr; } }
+  .side-info { display: flex; flex-direction: column; gap: .6rem; min-width: 0; }
+  .digit { width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); }
+  .readout { font-size: .95rem; }
+  .legend { display: flex; flex-wrap: wrap; gap: .25rem .7rem; font-size: .82rem; color: var(--muted); }
+  .legend i { display: inline-block; width: .62rem; height: .62rem; border-radius: 50%; margin-right: .25rem; vertical-align: -.02rem; }
+
+  /* Controls */
+  button { font: inherit; font-size: .9rem; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: .45rem .95rem; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--card); font-weight: 600; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 999px; padding: 2px; gap: 2px; }
+  .seg button { border: 0; padding: .35rem .8rem; font-size: .84rem; white-space: nowrap; }
+  .seg button[aria-pressed="true"] { background: var(--fg); color: var(--card); }
+  .btns { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .7rem; }
+
+  /* Encoder section */
+  .enc-grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
+  @media (min-width: 620px) { .enc-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .panel-label { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 .35rem; }
+  #pad { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); touch-action: none; cursor: crosshair; }
+  .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin-top: 1.25rem; }
+  figure { margin: 0; }
+  figcaption { font-size: .8rem; color: var(--muted); margin-top: .3rem; line-height: 1.35; }
+  .stats-wrap { overflow-x: auto; margin-top: 1rem; }
+  .stats { border-collapse: collapse; font-size: .9rem; min-width: 18rem; }
+  .stats th, .stats td { padding: .3rem .8rem .3rem 0; text-align: right; white-space: nowrap; }
+  .stats th { text-align: left; font-weight: 500; color: var(--muted); }
+  .stats thead th { border-bottom: 1px solid var(--line); }
+  .elbo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin-top: 1rem; }
+  .elbo div { border: 1px solid var(--line); border-radius: 10px; padding: .5rem .65rem; min-width: 0; }
+  .elbo b { display: block; font: 600 1.15rem ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .elbo span { font-size: .78rem; color: var(--muted); }
+
+  /* Explainer */
+  .arch { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: 1rem 0 .3rem; font-size: .85rem; }
+  .arch .l { border-radius: 8px; padding: .35rem .55rem; text-align: center; line-height: 1.2; border: 1px solid; }
+  .arch .l small { display: block; font-size: .72rem; opacity: .8; }
+  .arch .io { border-color: var(--line); }
+  .arch .e { background: var(--enc); border-color: var(--enc-b); }
+  .arch .d { background: var(--dec); border-color: var(--dec-b); }
+  .arch .z { background: var(--accent); border-color: var(--accent); color: var(--card); font-weight: 600; }
+  .arch .ar { color: var(--muted); }
+  .formula { font-family: ui-serif, Georgia, serif; font-size: 1.08rem; padding: .8rem 1rem; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 8px 8px 0; overflow-x: auto; white-space: nowrap; margin: .8rem 0; }
+  ul.notice { padding-left: 1.2rem; margin: .4rem 0; }
+  ul.notice li { margin: .35rem 0; }
+  #curve { width: 100%; height: auto; display: block; margin-top: .4rem; }
+  footer { margin-top: 2rem; font-size: .85rem; color: var(--muted); }
+  footer p { margin: .3rem 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="kicker">Interactive · runs entirely in your browser</p>
+    <h1>Inside a variational autoencoder</h1>
+    <p class="lede">A small VAE trained on handwritten digits, with everything squeezed through a bottleneck of just two numbers. Walk around its latent space, or draw a digit and watch the encoder place it.</p>
+  </header>
+
+  <div id="status">Loading the model (about 1&nbsp;MB)…</div>
+
+  <section id="walk">
+    <h2><span class="n">1</span>Walk the latent space</h2>
+    <p>Every image this decoder can produce comes from a point <span class="mono">z = (z₁, z₂)</span>. The dots are 3,000 test digits the network has never trained on, placed where the encoder puts them and coloured by their true label. <strong>Touch or drag anywhere</strong> on the map to decode that point.</p>
+    <div class="map-wrap">
+      <canvas id="map" tabindex="0" aria-label="Latent space map. Drag, or use the arrow keys, to choose a point to decode."></canvas>
+      <div class="map-side">
+        <canvas id="decoded" class="digit" width="28" height="28" aria-label="Decoded image"></canvas>
+        <div class="side-info">
+          <div class="readout">z = (<span id="zx">0.00</span>, <span id="zy">0.00</span>)</div>
+          <div class="seg" role="group" aria-label="Map background">
+            <button data-mode="dots" aria-pressed="true">Test digits</button>
+            <button data-mode="grid" aria-pressed="false">Grid</button>
+          </div>
+          <div class="legend" id="legend"></div>
+          <p class="small muted" style="margin:0">Dashed rings show the prior N(0, I) at 1σ and 2σ.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="encode">
+    <h2><span class="n">2</span>Encode a digit</h2>
+    <p>The encoder doesn't map an image to a single point. It outputs a Gaussian <span class="mono">q(z|x)</span> with mean μ and standard deviation σ. To decode, we sample from it with the <strong>reparameterisation trick</strong>: <span class="mono">z = μ + σ ⊙ ε</span>, where <span class="mono">ε ~ N(0, I)</span>.</p>
+    <div class="enc-grid">
+      <div>
+        <p class="panel-label">Draw here</p>
+        <canvas id="pad" aria-label="Drawing pad"></canvas>
+        <div class="btns">
+          <button id="clear">Clear</button>
+          <button id="random">Random test digit</button>
+        </div>
+      </div>
+      <div>
+        <p class="panel-label">Where q(z|x) lands</p>
+        <canvas id="mini" aria-label="Encoder distribution in latent space"></canvas>
+        <div class="btns">
+          <button id="sample" class="primary">Sample z ~ q(z|x)</button>
+          <div class="seg" role="group" aria-label="Zoom">
+            <button data-zoom="0" aria-pressed="true">Whole space</button>
+            <button data-zoom="1" aria-pressed="false">Zoom in</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="trio">
+      <figure><canvas id="seen" class="digit" width="28" height="28"></canvas><figcaption id="seen-cap">x: what the encoder sees (28×28)</figcaption></figure>
+      <figure><canvas id="recon" class="digit" width="28" height="28"></canvas><figcaption>decoded from μ</figcaption></figure>
+      <figure><canvas id="samp" class="digit" width="28" height="28"></canvas><figcaption>decoded from the sampled z</figcaption></figure>
+    </div>
+    <div class="stats-wrap">
+      <table class="stats">
+        <thead><tr><th></th><th>z₁</th><th>z₂</th></tr></thead>
+        <tbody>
+          <tr><th>μ (mean)</th><td id="mu0">—</td><td id="mu1">—</td></tr>
+          <tr><th>σ (std dev)</th><td id="sg0">—</td><td id="sg1">—</td></tr>
+          <tr><th>ε (noise)</th><td id="ep0">—</td><td id="ep1">—</td></tr>
+          <tr><th>z = μ + σ·ε</th><td id="zz0">—</td><td id="zz1">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="elbo">
+      <div><b id="rec">—</b><span>reconstruction log p(x|z)</span></div>
+      <div><b id="kl">—</b><span>KL from q(z|x) to the prior</span></div>
+      <div><b id="elbo">—</b><span>ELBO = recon − KL</span></div>
+    </div>
+    <p class="small muted">All three are in nats, for this one sample of z. Tap <em>Sample</em> a few times. Each ε gives a slightly different z inside the ellipse and a slightly different digit. You can also draw over a test digit, for example closing the top of a 4, and watch it slide towards the 9s.</p>
+  </section>
+
+  <section id="how">
+    <h2><span class="n">3</span>What's going on</h2>
+    <div class="arch" aria-label="Network architecture">
+      <div class="l io">x<small>784 px</small></div><span class="ar">→</span>
+      <div class="l e">256</div><span class="ar">→</span>
+      <div class="l e">128</div><span class="ar">→</span>
+      <div class="l e">μ, log σ²<small>2 + 2</small></div><span class="ar">→</span>
+      <div class="l z">z<small>2</small></div><span class="ar">→</span>
+      <div class="l d">128</div><span class="ar">→</span>
+      <div class="l d">256</div><span class="ar">→</span>
+      <div class="l io">x̂<small>784 px</small></div>
+    </div>
+    <p class="small muted" style="margin-top:0"><span style="color:var(--enc-b)">■</span> encoder q(z|x) &nbsp; <span style="color:var(--dec-b)">■</span> decoder p(x|z), with each pixel modelled as a Bernoulli probability</p>
+    <p>A VAE is a <strong>latent-variable model</strong>: imagine every digit was made by picking a hidden code z from a simple prior p(z) = N(0, I) and passing it through the decoder. We can't compute log p(x) directly, so we train the encoder and decoder together to maximise a lower bound on it, the <strong>evidence lower bound (ELBO)</strong>:</p>
+    <div class="formula">log p(x) ≥ 𝔼<sub>q(z|x)</sub>[ log p(x|z) ] − KL( q(z|x) ‖ p(z) )</div>
+    <p>The first term rewards accurate reconstructions. The second keeps each image's code distribution close to the prior. That's why the codes pack into a disc around the origin, why the space has few holes, and why decoding a random point from N(0, I) gives something digit-like. The <strong>reparameterisation trick</strong> moves the randomness into ε, so gradients can flow through μ and σ and the whole thing trains with ordinary backpropagation. That was the key idea of Kingma &amp; Welling's 2013 paper.</p>
+
+    <h3>Things to notice</h3>
+    <ul class="notice">
+      <li><strong>Smooth morphing.</strong> Drag slowly between clusters: a 7 becomes a 9 becomes a 4, with plausible in-between digits all the way.</li>
+      <li><strong>Overlap.</strong> Two numbers aren't enough to keep ten classes apart. 4s and 9s, and 3s, 5s and 8s, share territory. Real models use dozens or thousands of latent dimensions.</li>
+      <li><strong>The edges.</strong> Far outside the 2σ ring the prior has almost no mass, so the decoder was barely trained there and its digits stretch and blur. Try the decoded grid.</li>
+      <li><strong>Blurriness.</strong> A Bernoulli or Gaussian decoder averages over what it's unsure of. That's why VAE samples look soft, and partly why GANs and diffusion models took over image generation. Modern systems such as Stable Diffusion still use a VAE, but as a compressor whose latent space a diffusion model learns.</li>
+      <li><strong>Draw something that isn't a digit.</strong> The encoder still has to put it somewhere, and the decoder answers with its nearest digit-shaped guess.</li>
+    </ul>
+
+    <h3>This model</h3>
+    <p class="small">Trained with PyTorch on MNIST's 60,000 training digits for <span id="t-epochs">—</span> epochs (Adam, batch 128). The average test-set ELBO is <b class="mono" id="t-elbo">—</b> nats: reconstruction <span class="mono" id="t-rec">—</span>, KL <span class="mono" id="t-kl">—</span>. The weights ship as 16-bit floats, and every forward pass here is plain JavaScript with no ML library.</p>
+    <svg id="curve" viewBox="0 0 320 90" role="img" aria-label="Test ELBO by training epoch"></svg>
+  </section>
+
+  <footer>
+    <p>Made with Claude, 2026-10-17 · <a href="../../index.html">All pages</a></p>
+    <p>Paper: D. P. Kingma &amp; M. Welling, <a href="https://arxiv.org/abs/1312.6114">Auto-Encoding Variational Bayes</a> (2013). Data: MNIST, by Y. LeCun, C. Cortes &amp; C. J. C. Burges. Training script: <a href="vae-explorer/train_vae.py">train_vae.py</a>.</p>
+  </footer>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const PAL = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
+const S = { z: [0, 0], mode: "dots", zoom: false, enc: null, samples: [], sampleX: null, sampleLabel: null,
+            layers: {}, gridProbs: null, gridCanvas: null, digits: {} };
+let W, meta, E, MAIN, theme, scatter, testDigits;
+
+// ---------- Model ----------
+function half(h) {
+  const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 0x1f, f = h & 0x3ff;
+  if (e === 0) return s * f * 2 ** -24;
+  if (e === 31) return f ? NaN : s * Infinity;
+  return s * (1 + f / 1024) * 2 ** (e - 15);
+}
+
+function dense(x, name, relu) {
+  const { data: w, shape: [nin, nout] } = W[name], out = Float32Array.from(W["b" + name].data);
+  for (let i = 0; i < nin; i++) {
+    const xi = x[i];
+    if (xi === 0) continue;
+    const o = i * nout;
+    for (let j = 0; j < nout; j++) out[j] += xi * w[o + j];
+  }
+  if (relu) for (let j = 0; j < nout; j++) if (out[j] < 0) out[j] = 0;
+  return out;
+}
+
+function encode(x) {
+  const h = dense(dense(x, "W1", true), "W2", true);
+  const mu = dense(h, "Wm"), lv = dense(h, "Wv");
+  return { mu, lv, sigma: lv.map((v) => Math.exp(0.5 * v)) };
+}
+const decodeLogits = (z) => dense(dense(dense(z, "D1", true), "D2", true), "D3");
+const sigmoid = (v) => 1 / (1 + Math.exp(-v));
+const decode = (z) => decodeLogits(z).map(sigmoid);
+const softplus = (v) => (v > 0 ? v + Math.log1p(Math.exp(-v)) : Math.log1p(Math.exp(v)));
+function randn() {
+  let u = 0;
+  while (u === 0) u = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+// ---------- Drawing helpers ----------
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement), g = (n) => cs.getPropertyValue(n).trim();
+  const rgb = (s) => { s = s.replace("#", ""); if (s.length === 3) s = [...s].map((c) => c + c).join(""); return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16)); };
+  theme = { card: g("--card"), fg: g("--fg"), muted: g("--muted"), line: g("--line"), accent: g("--accent"),
+            inkCss: g("--ink"), ink: rgb(g("--ink")), paper: rgb(g("--paper")) };
+}
+
+function setPx(data, o, t) {
+  const { ink, paper } = theme;
+  data[o] = paper[0] + (ink[0] - paper[0]) * t;
+  data[o + 1] = paper[1] + (ink[1] - paper[1]) * t;
+  data[o + 2] = paper[2] + (ink[2] - paper[2]) * t;
+  data[o + 3] = 255;
+}
+
+function paintDigit(id, p) {
+  S.digits[id] = p;
+  const ctx = $("#" + id).getContext("2d"), img = ctx.createImageData(28, 28);
+  for (let i = 0; i < 784; i++) setPx(img.data, i * 4, p ? p[i] : 0);
+  ctx.putImageData(img, 0, 0);
+}
+
+function fitCanvas(cv) {
+  const w = Math.round(cv.clientWidth * Math.min(window.devicePixelRatio || 1, 3));
+  if (w > 0 && cv.width !== w) { cv.width = cv.height = w; return true; }
+  return false;
+}
+
+const toPx = (w, v, z) => [((z[0] - v.cx) / v.h + 1) / 2 * w, (1 - (z[1] - v.cy) / v.h) / 2 * w];
+
+function ellipse(c, x, y, rx, ry) { c.beginPath(); c.ellipse(x, y, Math.max(rx, 0.5), Math.max(ry, 0.5), 0, 0, 2 * Math.PI); }
+
+function gridCanvas() {
+  if (S.gridCanvas) return S.gridCanvas;
+  const N = 16;
+  if (!S.gridProbs) {
+    S.gridProbs = [];
+    for (let r = 0; r < N; r++)
+      for (let k = 0; k < N; k++)
+        S.gridProbs.push(decode([-E + (k + 0.5) * 2 * E / N, E - (r + 0.5) * 2 * E / N]));
+  }
+  const cv = document.createElement("canvas"), side = N * 28;
+  cv.width = cv.height = side;
+  const ctx = cv.getContext("2d"), img = ctx.createImageData(side, side);
+  S.gridProbs.forEach((p, idx) => {
+    const r = Math.floor(idx / N), k = idx % N;
+    for (let i = 0; i < 784; i++) setPx(img.data, ((r * 28 + Math.floor(i / 28)) * side + k * 28 + (i % 28)) * 4, p[i]);
+  });
+  ctx.putImageData(img, 0, 0);
+  return (S.gridCanvas = cv);
+}
+
+// Background layer: grid or dots, axes, prior rings. Cached until size, view, mode or theme change.
+function staticLayer(cv, view, { grid = false, faint = false, ticks = false } = {}) {
+  const w = cv.width, d = w / cv.clientWidth || 1, off = document.createElement("canvas");
+  off.width = off.height = w;
+  const c = off.getContext("2d"), P = (z) => toPx(w, view, z);
+  c.fillStyle = theme.card;
+  c.fillRect(0, 0, w, w);
+  if (grid) { c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high"; c.drawImage(gridCanvas(), 0, 0, w, w); }
+  const [ox, oy] = P([0, 0]);
+  c.lineWidth = d;
+  c.strokeStyle = theme.line;
+  c.globalAlpha = grid ? 0.5 : 1;
+  c.beginPath(); c.moveTo(ox, 0); c.lineTo(ox, w); c.moveTo(0, oy); c.lineTo(w, oy); c.stroke();
+  c.setLineDash([4 * d, 4 * d]);
+  c.strokeStyle = theme.muted;
+  for (const r of [1, 2]) { c.beginPath(); c.arc(ox, oy, (r / view.h) * w / 2, 0, 2 * Math.PI); c.stroke(); }
+  c.setLineDash([]);
+  c.globalAlpha = 1;
+  if (ticks && !grid) {
+    c.fillStyle = theme.muted;
+    c.font = `${10.5 * d}px ui-monospace, Menlo, monospace`;
+    c.textAlign = "center"; c.textBaseline = "top";
+    for (let k = -Math.floor(view.h); k <= Math.floor(view.h); k++) {
+      if (k === 0 || Math.abs(k) === view.h) continue;
+      const [x] = P([k, 0]), [, y] = P([0, k]), lab = String(k).replace("-", "−");
+      c.fillText(lab, x, oy + 4 * d);
+      c.textAlign = "left"; c.textBaseline = "middle"; c.fillText(lab, ox + 4 * d, y);
+      c.textAlign = "center"; c.textBaseline = "top";
+    }
+  }
+  if (!grid) {
+    const r = (faint ? 1.4 : 1.9) * d, mu = scatter.mu, lab = scatter.labels;
+    c.globalAlpha = faint ? 0.4 : 0.75;
+    for (let k = 0; k < 10; k++) {
+      c.fillStyle = PAL[k];
+      c.beginPath();
+      for (let i = 0; i < lab.length; i++) {
+        if (lab[i] !== k) continue;
+        const [x, y] = P([mu[2 * i], mu[2 * i + 1]]);
+        if (x < -r || y < -r || x > w + r || y > w + r) continue;
+        c.moveTo(x + r, y); c.arc(x, y, r, 0, 2 * Math.PI);
+      }
+      c.fill();
+    }
+    c.globalAlpha = 1;
+  }
+  return off;
+}
+
+function layer(name, cv, view, opts) {
+  const key = [cv.width, view.cx, view.cy, view.h, opts.grid].join();
+  if (S.layers[name]?.key !== key) S.layers[name] = { key, img: staticLayer(cv, view, opts) };
+  return S.layers[name].img;
+}
+
+// ---------- Section 1: latent map ----------
+function drawMain() {
+  const cv = $("#map"), c = cv.getContext("2d"), w = cv.width, d = w / cv.clientWidth || 1;
+  c.drawImage(layer("main", cv, MAIN, { grid: S.mode === "grid", ticks: true }), 0, 0);
+  const [x, y] = toPx(w, MAIN, S.z);
+  c.beginPath(); c.arc(x, y, 11 * d, 0, 2 * Math.PI);
+  c.lineWidth = 5 * d; c.strokeStyle = theme.card; c.stroke();
+  c.lineWidth = 2 * d; c.strokeStyle = theme.fg; c.stroke();
+  c.beginPath(); c.arc(x, y, 3 * d, 0, 2 * Math.PI); c.fillStyle = theme.accent; c.fill();
+}
+
+const fmt = (v, n = 2) => v.toFixed(n).replace("-", "−");
+
+function updateMain() {
+  paintDigit("decoded", decode(S.z));
+  $("#zx").textContent = fmt(S.z[0]);
+  $("#zy").textContent = fmt(S.z[1]);
+  drawMain();
+}
+
+let mainPending = false;
+function scheduleMain() {
+  if (mainPending) return;
+  mainPending = true;
+  requestAnimationFrame(() => { mainPending = false; updateMain(); });
+}
+
+function initMap() {
+  const cv = $("#map");
+  let dragging = false;
+  const move = (e) => {
+    const r = cv.getBoundingClientRect(), clamp = (v) => Math.max(-E, Math.min(E, v));
+    S.z = [clamp(((e.clientX - r.left) / r.width * 2 - 1) * E), clamp((1 - (e.clientY - r.top) / r.height * 2) * E)];
+    scheduleMain();
+  };
+  cv.addEventListener("pointerdown", (e) => { dragging = true; cv.setPointerCapture(e.pointerId); move(e); });
+  cv.addEventListener("pointermove", (e) => { if (dragging) move(e); });
+  const stop = () => { dragging = false; };
+  cv.addEventListener("pointerup", stop);
+  cv.addEventListener("pointercancel", stop);
+  cv.addEventListener("keydown", (e) => {
+    const step = e.shiftKey ? 0.5 : 0.1, dz = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
+    if (!dz) return;
+    e.preventDefault();
+    S.z = [Math.max(-E, Math.min(E, S.z[0] + dz[0])), Math.max(-E, Math.min(E, S.z[1] + dz[1]))];
+    scheduleMain();
+  });
+  document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
+    S.mode = b.dataset.mode;
+    document.querySelectorAll("[data-mode]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    drawMain();
+  }));
+  $("#legend").innerHTML = PAL.map((c, k) => `<span><i style="background:${c}"></i>${k}</span>`).join("");
+}
+
+// ---------- Section 2: encoder ----------
+const pad = $("#pad"), PAD = 280;
+pad.width = pad.height = PAD;
+const pc = pad.getContext("2d", { willReadFrequently: true });
+
+// Turn the drawing into an MNIST-style input: fit the ink's bounding box into 20×20,
+// then place it in a 28×28 field with its centre of mass in the middle.
+function padToInput() {
+  const d = pc.getImageData(0, 0, PAD, PAD).data;
+  let x0 = PAD, y0 = PAD, x1 = -1, y1 = -1;
+  for (let y = 0; y < PAD; y++)
+    for (let x = 0; x < PAD; x++)
+      if (d[(y * PAD + x) * 4 + 3] > 10) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return null;
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, s = 20 / Math.max(bw, bh);
+  const tw = Math.max(1, Math.round(bw * s)), th = Math.max(1, Math.round(bh * s));
+  const mid = document.createElement("canvas");
+  mid.width = tw * 4; mid.height = th * 4;
+  const mc = mid.getContext("2d");
+  mc.imageSmoothingQuality = "high";
+  mc.drawImage(pad, x0, y0, bw, bh, 0, 0, mid.width, mid.height);
+  const small = document.createElement("canvas");
+  small.width = tw; small.height = th;
+  const sc = small.getContext("2d", { willReadFrequently: true });
+  sc.imageSmoothingQuality = "high";
+  sc.drawImage(mid, 0, 0, tw, th);
+  const sd = sc.getImageData(0, 0, tw, th).data;
+  let m = 0, cx = 0, cy = 0;
+  for (let y = 0; y < th; y++)
+    for (let x = 0; x < tw; x++) { const a = sd[(y * tw + x) * 4 + 3] / 255; m += a; cx += a * x; cy += a * y; }
+  if (m === 0) return null;
+  const ox = Math.round(13.5 - cx / m), oy = Math.round(13.5 - cy / m), out = new Float32Array(784);
+  for (let y = 0; y < th; y++)
+    for (let x = 0; x < tw; x++) {
+      const X = x + ox, Y = y + oy;
+      if (X >= 0 && X < 28 && Y >= 0 && Y < 28) out[Y * 28 + X] = sd[(y * tw + x) * 4 + 3] / 255;
+    }
+  return out;
+}
+
+function miniView() {
+  if (!S.zoom || !S.enc) return MAIN;
+  return { cx: S.enc.mu[0], cy: S.enc.mu[1], h: Math.max(4 * Math.max(S.enc.sigma[0], S.enc.sigma[1]), 0.25) };
+}
+
+function drawMini() {
+  const cv = $("#mini"), c = cv.getContext("2d"), w = cv.width, d = w / cv.clientWidth || 1, v = miniView();
+  c.drawImage(layer("mini", cv, v, { faint: true }), 0, 0);
+  if (!S.enc) return;
+  const P = (z) => toPx(w, v, z), [mx, my] = P(S.enc.mu);
+  const sx = (S.enc.sigma[0] / v.h) * w / 2, sy = (S.enc.sigma[1] / v.h) * w / 2;
+  c.fillStyle = theme.accent;
+  c.globalAlpha = 0.14; ellipse(c, mx, my, 2 * sx, 2 * sy); c.fill();
+  c.globalAlpha = 0.22; ellipse(c, mx, my, sx, sy); c.fill();
+  c.globalAlpha = 1;
+  c.strokeStyle = theme.accent; c.lineWidth = 1.5 * d;
+  ellipse(c, mx, my, sx, sy); c.stroke();
+  c.setLineDash([3 * d, 3 * d]); ellipse(c, mx, my, 2 * sx, 2 * sy); c.stroke(); c.setLineDash([]);
+  S.samples.forEach((s, i) => {
+    const [x, y] = P(s.z), last = i === S.samples.length - 1;
+    if (last) { c.beginPath(); c.moveTo(mx, my); c.lineTo(x, y); c.strokeStyle = theme.fg; c.lineWidth = 1.2 * d; c.stroke(); }
+    c.beginPath(); c.arc(x, y, (last ? 3.6 : 2.3) * d, 0, 2 * Math.PI);
+    c.fillStyle = last ? theme.fg : theme.accent; c.fill();
+  });
+  const k = 6 * d;
+  c.beginPath(); c.moveTo(mx - k, my); c.lineTo(mx + k, my); c.moveTo(mx, my - k); c.lineTo(mx, my + k);
+  c.lineWidth = 4 * d; c.strokeStyle = theme.card; c.stroke();
+  c.lineWidth = 2 * d; c.strokeStyle = theme.fg; c.stroke();
+}
+
+function setText(id, t) { $("#" + id).textContent = t; }
+
+function clearOutputs() {
+  S.enc = null; S.samples = [];
+  ["seen", "recon", "samp"].forEach((id) => paintDigit(id, null));
+  ["mu0", "mu1", "sg0", "sg1", "ep0", "ep1", "zz0", "zz1", "rec", "kl", "elbo"].forEach((id) => setText(id, "—"));
+  setText("seen-cap", "x: what the encoder sees (28×28)");
+  drawMini();
+}
+
+function runEncoder() {
+  const x = S.sampleX || padToInput();
+  if (!x) return clearOutputs();
+  S.x = x;
+  paintDigit("seen", x);
+  setText("seen-cap", S.sampleX ? `x: a real test digit, labelled ${S.sampleLabel}` : "x: what the encoder sees (28×28)");
+  S.enc = encode(x);
+  S.samples = [];
+  paintDigit("recon", decode(S.enc.mu));
+  const { mu, sigma, lv } = S.enc;
+  setText("mu0", fmt(mu[0])); setText("mu1", fmt(mu[1]));
+  setText("sg0", fmt(sigma[0], 3)); setText("sg1", fmt(sigma[1], 3));
+  S.kl = 0.5 * (sigma[0] ** 2 + sigma[1] ** 2 + mu[0] ** 2 + mu[1] ** 2 - 2 - lv[0] - lv[1]);
+  setText("kl", fmt(S.kl, 1));
+  addSample();
+}
+
+function addSample() {
+  if (!S.enc) return;
+  const { mu, sigma } = S.enc, eps = [randn(), randn()];
+  const z = [mu[0] + sigma[0] * eps[0], mu[1] + sigma[1] * eps[1]];
+  S.samples.push({ z });
+  if (S.samples.length > 60) S.samples.shift();
+  const logits = decodeLogits(z);
+  paintDigit("samp", logits.map(sigmoid));
+  let rec = 0;
+  for (let i = 0; i < 784; i++) rec -= softplus(logits[i]) - S.x[i] * logits[i];
+  setText("ep0", fmt(eps[0])); setText("ep1", fmt(eps[1]));
+  setText("zz0", fmt(z[0])); setText("zz1", fmt(z[1]));
+  setText("rec", fmt(rec, 1));
+  setText("elbo", fmt(rec - S.kl, 1));
+  drawMini();
+}
+
+let encPending = false;
+function scheduleEncode() {
+  if (encPending) return;
+  encPending = true;
+  requestAnimationFrame(() => { encPending = false; runEncoder(); });
+}
+
+function loadTestDigit() {
+  const i = Math.floor(Math.random() * meta.samples.count);
+  const x = Float32Array.from(testDigits.subarray(i * 784, (i + 1) * 784), (v) => v / 255);
+  S.sampleX = x; S.sampleLabel = meta.samples.labels[i];
+  const t = document.createElement("canvas");
+  t.width = t.height = 28;
+  const tc = t.getContext("2d"), img = tc.createImageData(28, 28), [r, g, b] = theme.ink;
+  for (let k = 0; k < 784; k++) img.data.set([r, g, b, Math.round(x[k] * 255)], k * 4);
+  tc.putImageData(img, 0, 0);
+  pc.clearRect(0, 0, PAD, PAD);
+  pc.imageSmoothingEnabled = true;
+  pc.drawImage(t, 0, 0, PAD, PAD);
+  runEncoder();
+}
+
+function initPad() {
+  let last = null;
+  const pt = (e) => { const r = pad.getBoundingClientRect(); return [(e.clientX - r.left) / r.width * PAD, (e.clientY - r.top) / r.height * PAD]; };
+  const line = (a, b) => {
+    pc.strokeStyle = theme.inkCss; pc.lineWidth = 19; pc.lineCap = "round"; pc.lineJoin = "round";
+    pc.beginPath(); pc.moveTo(a[0], a[1]); pc.lineTo(b[0], b[1]); pc.stroke();
+  };
+  pad.addEventListener("pointerdown", (e) => {
+    pad.setPointerCapture(e.pointerId);
+    S.sampleX = null;
+    last = pt(e); line(last, last); scheduleEncode();
+  });
+  pad.addEventListener("pointermove", (e) => {
+    if (!last) return;
+    const p = pt(e); line(last, p); last = p; scheduleEncode();
+  });
+  const stop = () => { last = null; };
+  pad.addEventListener("pointerup", stop);
+  pad.addEventListener("pointercancel", stop);
+  $("#clear").addEventListener("click", () => { pc.clearRect(0, 0, PAD, PAD); S.sampleX = null; clearOutputs(); });
+  $("#random").addEventListener("click", loadTestDigit);
+  $("#sample").addEventListener("click", addSample);
+  document.querySelectorAll("[data-zoom]").forEach((b) => b.addEventListener("click", () => {
+    S.zoom = b.dataset.zoom === "1";
+    document.querySelectorAll("[data-zoom]").forEach((x) => x.setAttribute("aria-pressed", x === b));
+    drawMini();
+  }));
+}
+
+// ---------- Section 3: training stats ----------
+function initStats() {
+  const t = meta.training;
+  setText("t-epochs", t.epochs);
+  setText("t-elbo", fmt(t.test_elbo, 1));
+  setText("t-rec", fmt(t.test_recon, 1));
+  setText("t-kl", fmt(t.test_kl, 1));
+  const h = t.history.map((r) => r.test_elbo), lo = Math.min(...h), hi = Math.max(...h);
+  const X = (i) => 34 + (i / (h.length - 1)) * 278, Y = (v) => 10 + (1 - (v - lo) / (hi - lo || 1)) * 62;
+  const pts = h.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
+  $("#curve").innerHTML =
+    `<line x1="34" y1="72" x2="312" y2="72" stroke="var(--line)"/>` +
+    `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>` +
+    `<text x="30" y="14" text-anchor="end" font-size="9" fill="var(--muted)" font-family="ui-monospace,monospace">${fmt(hi, 0)}</text>` +
+    `<text x="30" y="74" text-anchor="end" font-size="9" fill="var(--muted)" font-family="ui-monospace,monospace">${fmt(lo, 0)}</text>` +
+    `<text x="34" y="86" font-size="9" fill="var(--muted)">epoch 1</text>` +
+    `<text x="312" y="86" text-anchor="end" font-size="9" fill="var(--muted)">epoch ${h.length} · test ELBO (higher is better)</text>`;
+}
+
+// ---------- Startup ----------
+function redrawAll() {
+  S.layers = {};
+  S.gridCanvas = null;
+  for (const [id, p] of Object.entries(S.digits)) paintDigit(id, p);
+  drawMain();
+  drawMini();
+}
+
+function init() {
+  readTheme();
+  initMap();
+  initPad();
+  initStats();
+  fitCanvas($("#map")); fitCanvas($("#mini"));
+  updateMain();
+  loadTestDigit();
+  new ResizeObserver(() => {
+    const a = fitCanvas($("#map")), b = fitCanvas($("#mini"));
+    if (a) drawMain();
+    if (b) drawMini();
+  }).observe(document.body);
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    readTheme();
+    // Recolour existing strokes on the pad to the new ink colour.
+    pc.globalCompositeOperation = "source-in";
+    pc.fillStyle = theme.inkCss; pc.fillRect(0, 0, PAD, PAD);
+    pc.globalCompositeOperation = "source-over";
+    redrawAll();
+  });
+}
+
+async function load() {
+  try {
+    const get = (f, kind) => fetch(`vae-explorer/${f}?v=1`).then((r) => { if (!r.ok) throw new Error(`${f}: HTTP ${r.status}`); return r[kind](); });
+    const [m, buf] = await Promise.all([get("model.json", "json"), get("weights.bin", "arrayBuffer")]);
+    meta = m; E = m.extent; MAIN = { cx: 0, cy: 0, h: E }; scatter = m.scatter;
+    const u16 = new Uint16Array(buf, 0, m.samples.byteOffset / 2);
+    W = {};
+    for (const t of m.tensors) {
+      const n = t.shape.reduce((a, b) => a * b, 1), a = new Float32Array(n);
+      for (let i = 0; i < n; i++) a[i] = half(u16[t.offset + i]);
+      W[t.name] = { data: a, shape: t.shape };
+    }
+    testDigits = new Uint8Array(buf, m.samples.byteOffset, m.samples.count * 784);
+  } catch (err) {
+    $("#status").textContent = `Couldn't load the model (${err.message}). Try reloading the page.`;
+    return;
+  }
+  $("#status").hidden = true;
+  init();
+}
+load();
+</script>
+</body>
+</html>
