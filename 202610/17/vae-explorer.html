@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>VAE explorer</title>
-<meta name="description" content="An interactive variational autoencoder trained on handwritten digits, running in your browser.">
+<meta name="description" content="An interactive variational autoencoder trained on handwritten digits, running in your browser, with versions jointly trained with a classifier for comparison.">
 <style>
   :root {
     color-scheme: light dark;
     --bg: #f5f4ef; --card: #ffffff; --fg: #1c1c1e; --muted: #6b6b70; --line: #e2e0d8;
     --accent: #c2410c; --ink: #1c1c1e; --paper: #ffffff;
     --enc: #e7eef8; --enc-b: #3f6ea5; --dec: #fbeee4; --dec-b: #c2410c;
+    --region-alpha: 0.13;
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #111113; --card: #1b1b1e; --fg: #ececee; --muted: #9b9ba2; --line: #2e2e33;
       --accent: #fb923c; --ink: #f4f4f5; --paper: #1b1b1e;
       --enc: #1c2838; --enc-b: #8fb4e3; --dec: #35241a; --dec-b: #fb923c;
+      --region-alpha: 0.2;
     }
   }
   * { box-sizing: border-box; }
@@ -35,9 +37,19 @@
   .muted { color: var(--muted); }
   .small { font-size: .86rem; }
   p .mono { white-space: nowrap; font-size: .92em; }
-  .mono, .stats, .readout, .legend { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+  .mono, .stats, .readout, .legend, .cmp { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
   canvas { display: block; }
-  #status { margin-top: 1.5rem; padding: .9rem 1.1rem; border-radius: 12px; border: 1px dashed var(--line); color: var(--muted); }
+  #status { margin-top: 1rem; padding: .9rem 1.1rem; border-radius: 12px; border: 1px dashed var(--line); color: var(--muted); }
+
+  /* Model switcher (sticky) */
+  .model-bar { position: sticky; top: 0; z-index: 5; margin: 1.25rem -1rem 0; padding: calc(.55rem + env(safe-area-inset-top, 0px)) 1rem .55rem;
+               background: var(--bg); background: color-mix(in srgb, var(--bg) 90%, transparent);
+               -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+               border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .7rem; }
+  .model-bar .lbl { font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+  @media (max-width: 480px) { .model-bar .lbl { display: none; } }
+  #model-desc { margin: .7rem 0 0; font-size: .92rem; color: var(--muted); }
+  #model-desc b { color: var(--fg); }
 
   /* Latent map */
   .map-wrap { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
@@ -56,7 +68,7 @@
   button { font: inherit; font-size: .9rem; color: var(--fg); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: .45rem .95rem; cursor: pointer; }
   button:hover { border-color: var(--muted); }
   button.primary { background: var(--accent); border-color: var(--accent); color: var(--card); font-weight: 600; }
-  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 999px; padding: 2px; gap: 2px; }
+  .seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 999px; padding: 2px; gap: 2px; background: var(--card); }
   .seg button { border: 0; padding: .35rem .8rem; font-size: .84rem; white-space: nowrap; }
   .seg button[aria-pressed="true"] { background: var(--fg); color: var(--card); }
   .btns { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .7rem; }
@@ -64,12 +76,13 @@
   /* Encoder section */
   .enc-grid { display: grid; gap: 1.25rem; grid-template-columns: minmax(0, 1fr); margin-top: 1rem; }
   @media (min-width: 620px) { .enc-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .nt { text-transform: none; }
   .panel-label { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 0 0 .35rem; }
   #pad { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); touch-action: none; cursor: crosshair; }
   .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; margin-top: 1.25rem; }
   figure { margin: 0; }
   figcaption { font-size: .8rem; color: var(--muted); margin-top: .3rem; line-height: 1.35; }
-  .stats-wrap { overflow-x: auto; margin-top: 1rem; }
+  .stats-wrap, .cmp-wrap { overflow-x: auto; margin-top: 1rem; }
   .stats { border-collapse: collapse; font-size: .9rem; min-width: 18rem; }
   .stats th, .stats td { padding: .3rem .8rem .3rem 0; text-align: right; white-space: nowrap; }
   .stats th { text-align: left; font-weight: 500; color: var(--muted); }
@@ -77,7 +90,13 @@
   .elbo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin-top: 1rem; }
   .elbo div { border: 1px solid var(--line); border-radius: 10px; padding: .5rem .65rem; min-width: 0; }
   .elbo b { display: block; font: 600 1.15rem ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
-  .elbo span { font-size: .78rem; color: var(--muted); }
+  .elbo span { display: block; font-size: .78rem; line-height: 1.35; color: var(--muted); -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere; }
+  .cls { margin-top: 1.25rem; border: 1px solid var(--line); border-radius: 12px; padding: .8rem .9rem; }
+  .bars { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: .3rem; height: 5rem; margin-top: .3rem; }
+  .bars div { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; }
+  .bars i { display: block; width: 100%; border-radius: 4px 4px 0 0; min-height: 2px; transition: height .15s; }
+  .bars span { font: .8rem ui-monospace, "SF Mono", Menlo, monospace; color: var(--muted); margin-top: .2rem; }
+  #cls-note { margin: .5rem 0 0; }
 
   /* Explainer */
   .arch { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin: 1rem 0 .3rem; font-size: .85rem; }
@@ -87,10 +106,18 @@
   .arch .e { background: var(--enc); border-color: var(--enc-b); }
   .arch .d { background: var(--dec); border-color: var(--dec-b); }
   .arch .z { background: var(--accent); border-color: var(--accent); color: var(--card); font-weight: 600; }
+  .arch .c { border-style: dashed; border-color: var(--muted); }
   .arch .ar { color: var(--muted); }
   .formula { font-family: ui-serif, Georgia, serif; font-size: 1.08rem; padding: .8rem 1rem; border-left: 3px solid var(--accent); background: var(--bg); border-radius: 0 8px 8px 0; overflow-x: auto; white-space: nowrap; margin: .8rem 0; }
   ul.notice { padding-left: 1.2rem; margin: .4rem 0; }
   ul.notice li { margin: .35rem 0; }
+  .cmp { border-collapse: collapse; font-size: .86rem; min-width: 30rem; width: 100%; }
+  .cmp th, .cmp td { padding: .4rem .6rem; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--line); }
+  .cmp thead th { font-family: system-ui, -apple-system, sans-serif; font-weight: 500; color: var(--muted); font-size: .78rem; vertical-align: bottom; white-space: normal; }
+  .cmp tbody th { text-align: left; font-weight: 500; }
+  .cmp tbody tr { cursor: pointer; }
+  .cmp tbody tr[aria-current="true"] { background: var(--bg); }
+  .cmp tbody tr[aria-current="true"] th { color: var(--accent); font-weight: 700; }
   #curve { width: 100%; height: auto; display: block; margin-top: .4rem; }
   footer { margin-top: 2rem; font-size: .85rem; color: var(--muted); }
   footer p { margin: .3rem 0; }
@@ -101,8 +128,19 @@
   <header>
     <p class="kicker">Interactive · runs entirely in your browser</p>
     <h1>Inside a variational autoencoder</h1>
-    <p class="lede">A small VAE trained on handwritten digits, with everything squeezed through a bottleneck of just two numbers. Walk around its latent space, or draw a digit and watch the encoder place it.</p>
+    <p class="lede">A small VAE trained on handwritten digits, with everything squeezed through a bottleneck of just two numbers. Walk around its latent space, draw a digit and watch the encoder place it, then compare it with versions that were also trained to classify.</p>
   </header>
+
+  <div class="model-bar">
+    <span class="lbl">Model</span>
+    <div class="seg" role="group" aria-label="Model">
+      <button data-model="alpha-0" aria-pressed="true">Unsupervised</button>
+      <button data-model="alpha-1" aria-pressed="false">α = 1</button>
+      <button data-model="alpha-10" aria-pressed="false">α = 10</button>
+      <button data-model="alpha-100" aria-pressed="false">α = 100</button>
+    </div>
+  </div>
+  <p id="model-desc"></p>
 
   <div id="status">Loading the model (about 1&nbsp;MB)…</div>
 
@@ -120,7 +158,7 @@
             <button data-mode="grid" aria-pressed="false">Grid</button>
           </div>
           <div class="legend" id="legend"></div>
-          <p class="small muted" style="margin:0">Dashed rings show the prior N(0, I) at 1σ and 2σ.</p>
+          <p class="small muted" style="margin:0">Dashed rings show the prior N(0, I) at 1σ and 2σ.<span id="region-hint" hidden> Shading shows the classifier's decision regions.</span></p>
         </div>
       </div>
     </div>
@@ -171,7 +209,12 @@
       <div><b id="kl">—</b><span>KL from q(z|x) to the prior</span></div>
       <div><b id="elbo">—</b><span>ELBO = recon − KL</span></div>
     </div>
-    <p class="small muted">All three are in nats, for this one sample of z. Tap <em>Sample</em> a few times. Each ε gives a slightly different z inside the ellipse and a slightly different digit. You can also draw over a test digit, for example closing the top of a 4, and watch it slide towards the 9s.</p>
+    <p class="small muted">All three are in nats, for this one sample of z. Tap <em>Sample</em> a few times. Each ε gives a slightly different z inside the ellipse and a slightly different digit. You can also draw over a test digit, for example closing the top of a 4, and watch it slide towards the 9s. Switching model at the top re-encodes the same digit.</p>
+    <div class="cls">
+      <p class="panel-label" id="cls-title">Classifier</p>
+      <div class="bars" id="bars" hidden></div>
+      <p class="small" id="cls-note"></p>
+    </div>
   </section>
 
   <section id="how">
@@ -194,14 +237,37 @@
     <h3>Things to notice</h3>
     <ul class="notice">
       <li><strong>Smooth morphing.</strong> Drag slowly between clusters: a 7 becomes a 9 becomes a 4, with plausible in-between digits all the way.</li>
-      <li><strong>Overlap.</strong> Two numbers aren't enough to keep ten classes apart. 4s and 9s, and 3s, 5s and 8s, share territory. Real models use dozens or thousands of latent dimensions.</li>
+      <li><strong>Overlap.</strong> The unsupervised model never sees a label, and it spends its two numbers on whatever explains the most pixels. Slant and stroke width change lots of pixels, while a 4 and a 9 differ by a few near the top, so 4s and 9s (and 3s, 5s and 8s) end up sharing territory.</li>
       <li><strong>The edges.</strong> Far outside the 2σ ring the prior has almost no mass, so the decoder was barely trained there and its digits stretch and blur. Try the decoded grid.</li>
       <li><strong>Blurriness.</strong> A Bernoulli or Gaussian decoder averages over what it's unsure of. That's why VAE samples look soft, and partly why GANs and diffusion models took over image generation. Modern systems such as Stable Diffusion still use a VAE, but as a compressor whose latent space a diffusion model learns.</li>
       <li><strong>Draw something that isn't a digit.</strong> The encoder still has to put it somewhere, and the decoder answers with its nearest digit-shaped guess.</li>
     </ul>
 
+    <h3>Adding a classifier</h3>
+    <div class="arch" aria-label="Classifier head">
+      <div class="l z">z<small>2</small></div><span class="ar">→</span>
+      <div class="l c">linear<small>2 → 10</small></div><span class="ar">→</span>
+      <div class="l io">softmax<small>p(digit | z)</small></div>
+    </div>
+    <p>The α models are the same VAE trained jointly with a classifier. A single linear layer reads the <em>sampled</em> z and predicts the digit, and its cross-entropy is added to the loss:</p>
+    <div class="formula">loss = −ELBO + α · cross-entropy( label, classifier(z) )</div>
+    <p>Everything else is identical: the same architecture, the same random initialisation, the same order of training data and 60 epochs. The only difference is α. Because the classifier reads a noisy sample rather than μ, classes have to be separated by more than the encoder's σ. Because it's linear, its decision regions on the map are straight-edged wedges. To compare all four models on the same footing, the table also scores a 10-nearest-neighbour vote on each model's codes, using training digits as the reference.</p>
+    <div class="cmp-wrap">
+      <table class="cmp" id="cmp">
+        <thead><tr><th style="text-align:left">Model</th><th>Test ELBO</th><th>Recon</th><th>KL</th><th>10-NN accuracy</th><th>Classifier accuracy</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="small muted">ELBO, reconstruction and KL are average nats per test image (higher ELBO is better). Accuracies are on the 10,000 test digits. Tap a row to switch model.</p>
+    <ul class="notice">
+      <li><strong>α = 1 is a nudge.</strong> The map looks much like the unsupervised one. The classifier's regions slice through clusters rather than around them, so it only gets 67% right. The ELBO doesn't suffer; it's 0.6 nats better, which may be run-to-run noise.</li>
+      <li><strong>α = 10 makes spokes.</strong> Classes start radiating out from the centre. 3s and 5s pull apart: the nearest-neighbour score goes from 74% to 92% for 3s and from 61% to 87% for 5s. 4, 7 and 9 are still tangled together. There's still no ELBO cost.</li>
+      <li><strong>α = 100 makes petals.</strong> Ten clusters sit around the origin, one per digit. A linear classifier reading just two numbers gets 96.8% of test digits right, and every digit scores above 95%. Style still varies within each petal; try dragging through the 1s in the grid.</li>
+      <li><strong>The price.</strong> To keep classes apart even after noise is added, the encoder pushes codes away from the prior. The map's range grows from ±3.5 to ±5, KL rises from 6.9 to 10.5 nats, and the ELBO drops by 4.3 nats. Reconstruction is almost unchanged. The middle of the map, where the prior puts most of its mass, becomes a crossroads of blended digits, so a z drawn from N(0, I) is more likely to land between classes.</li>
+    </ul>
+
     <h3>This model</h3>
-    <p class="small">Trained with PyTorch on MNIST's 60,000 training digits for <span id="t-epochs">—</span> epochs (Adam, batch 128). The average test-set ELBO is <b class="mono" id="t-elbo">—</b> nats: reconstruction <span class="mono" id="t-rec">—</span>, KL <span class="mono" id="t-kl">—</span>. The weights ship as 16-bit floats, and every forward pass here is plain JavaScript with no ML library.</p>
+    <p class="small">Trained with PyTorch on MNIST's 60,000 training digits for <span id="t-epochs">—</span> epochs (Adam, batch 128)<span id="t-alpha"></span>. The average test-set ELBO is <b class="mono" id="t-elbo">—</b> nats: reconstruction <span class="mono" id="t-rec">—</span>, KL <span class="mono" id="t-kl">—</span>. The weights ship as 16-bit floats, and every forward pass here is plain JavaScript with no ML library.</p>
     <svg id="curve" viewBox="0 0 320 90" role="img" aria-label="Test ELBO by training epoch"></svg>
   </section>
 
@@ -215,9 +281,13 @@
 "use strict";
 const $ = (s) => document.querySelector(s);
 const PAL = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"];
+const hexRgb = (s) => { s = s.trim().replace("#", ""); if (s.length === 3) s = [...s].map((c) => c + c).join(""); return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16)); };
+const PAL_RGB = PAL.map(hexRgb);
+const MODELS = ["alpha-0", "alpha-1", "alpha-10", "alpha-100"];
+const store = {};
 const S = { z: [0, 0], mode: "dots", zoom: false, enc: null, samples: [], sampleX: null, sampleLabel: null,
-            layers: {}, gridProbs: null, gridCanvas: null, digits: {} };
-let W, meta, E, MAIN, theme, scatter, testDigits;
+            layers: {}, gridProbs: null, gridCanvas: null, digits: {}, started: false, loadToken: 0 };
+let W, meta, E, MAIN, theme, scatter, testDigits, current;
 
 // ---------- Model ----------
 function half(h) {
@@ -248,6 +318,10 @@ const decodeLogits = (z) => dense(dense(dense(z, "D1", true), "D2", true), "D3")
 const sigmoid = (v) => 1 / (1 + Math.exp(-v));
 const decode = (z) => decodeLogits(z).map(sigmoid);
 const softplus = (v) => (v > 0 ? v + Math.log1p(Math.exp(-v)) : Math.log1p(Math.exp(v)));
+function classify(z) {
+  const l = dense(z, "Wc"), m = Math.max(...l), e = l.map((v) => Math.exp(v - m)), s = e.reduce((a, b) => a + b, 0);
+  return e.map((v) => v / s);
+}
 function randn() {
   let u = 0;
   while (u === 0) u = Math.random();
@@ -257,9 +331,8 @@ function randn() {
 // ---------- Drawing helpers ----------
 function readTheme() {
   const cs = getComputedStyle(document.documentElement), g = (n) => cs.getPropertyValue(n).trim();
-  const rgb = (s) => { s = s.replace("#", ""); if (s.length === 3) s = [...s].map((c) => c + c).join(""); return [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16)); };
   theme = { card: g("--card"), fg: g("--fg"), muted: g("--muted"), line: g("--line"), accent: g("--accent"),
-            inkCss: g("--ink"), ink: rgb(g("--ink")), paper: rgb(g("--paper")) };
+            inkCss: g("--ink"), ink: hexRgb(g("--ink")), paper: hexRgb(g("--paper")), regionAlpha: parseFloat(g("--region-alpha")) || 0.15 };
 }
 
 function setPx(data, o, t) {
@@ -307,7 +380,25 @@ function gridCanvas() {
   return (S.gridCanvas = cv);
 }
 
-// Background layer: grid or dots, axes, prior rings. Cached until size, view, mode or theme change.
+// The linear classifier's decision regions, coloured by predicted digit.
+function regionsCanvas(w, view) {
+  const n = Math.max(60, Math.round(w / 3)), cv = document.createElement("canvas");
+  cv.width = cv.height = n;
+  const ctx = cv.getContext("2d"), img = ctx.createImageData(n, n), Wc = W.Wc.data, b = W.bWc.data;
+  for (let py = 0; py < n; py++) {
+    const z2 = view.cy + (1 - (py + 0.5) / n * 2) * view.h;
+    for (let px = 0; px < n; px++) {
+      const z1 = view.cx + ((px + 0.5) / n * 2 - 1) * view.h;
+      let best = 0, bestV = -Infinity;
+      for (let k = 0; k < 10; k++) { const v = z1 * Wc[k] + z2 * Wc[10 + k] + b[k]; if (v > bestV) { bestV = v; best = k; } }
+      img.data.set([...PAL_RGB[best], 255], (py * n + px) * 4);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
+// Background layer: grid or dots, classifier regions, axes, prior rings. Cached until size, view, mode, model or theme change.
 function staticLayer(cv, view, { grid = false, faint = false, ticks = false } = {}) {
   const w = cv.width, d = w / cv.clientWidth || 1, off = document.createElement("canvas");
   off.width = off.height = w;
@@ -315,6 +406,12 @@ function staticLayer(cv, view, { grid = false, faint = false, ticks = false } = 
   c.fillStyle = theme.card;
   c.fillRect(0, 0, w, w);
   if (grid) { c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high"; c.drawImage(gridCanvas(), 0, 0, w, w); }
+  else if (meta.classifier) {
+    c.globalAlpha = theme.regionAlpha * (faint ? 0.8 : 1);
+    c.imageSmoothingEnabled = true;
+    c.drawImage(regionsCanvas(w, view), 0, 0, w, w);
+    c.globalAlpha = 1;
+  }
   const [ox, oy] = P([0, 0]);
   c.lineWidth = d;
   c.strokeStyle = theme.line;
@@ -339,7 +436,7 @@ function staticLayer(cv, view, { grid = false, faint = false, ticks = false } = 
   }
   if (!grid) {
     const r = (faint ? 1.4 : 1.9) * d, mu = scatter.mu, lab = scatter.labels;
-    c.globalAlpha = faint ? 0.4 : 0.75;
+    c.globalAlpha = faint ? 0.45 : 0.8;
     for (let k = 0; k < 10; k++) {
       c.fillStyle = PAL[k];
       c.beginPath();
@@ -357,7 +454,7 @@ function staticLayer(cv, view, { grid = false, faint = false, ticks = false } = 
 }
 
 function layer(name, cv, view, opts) {
-  const key = [cv.width, view.cx, view.cy, view.h, opts.grid].join();
+  const key = [current, cv.width, view.cx, view.cy, view.h, opts.grid].join();
   if (S.layers[name]?.key !== key) S.layers[name] = { key, img: staticLayer(cv, view, opts) };
   return S.layers[name].img;
 }
@@ -374,6 +471,8 @@ function drawMain() {
 }
 
 const fmt = (v, n = 2) => v.toFixed(n).replace("-", "−");
+const pct = (v) => (v == null ? "—" : (v * 100).toFixed(1) + "%");
+const clampZ = (v) => Math.max(-E, Math.min(E, v));
 
 function updateMain() {
   paintDigit("decoded", decode(S.z));
@@ -393,8 +492,8 @@ function initMap() {
   const cv = $("#map");
   let dragging = false;
   const move = (e) => {
-    const r = cv.getBoundingClientRect(), clamp = (v) => Math.max(-E, Math.min(E, v));
-    S.z = [clamp(((e.clientX - r.left) / r.width * 2 - 1) * E), clamp((1 - (e.clientY - r.top) / r.height * 2) * E)];
+    const r = cv.getBoundingClientRect();
+    S.z = [clampZ(((e.clientX - r.left) / r.width * 2 - 1) * E), clampZ((1 - (e.clientY - r.top) / r.height * 2) * E)];
     scheduleMain();
   };
   cv.addEventListener("pointerdown", (e) => { dragging = true; cv.setPointerCapture(e.pointerId); move(e); });
@@ -406,7 +505,7 @@ function initMap() {
     const step = e.shiftKey ? 0.5 : 0.1, dz = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, step], ArrowDown: [0, -step] }[e.key];
     if (!dz) return;
     e.preventDefault();
-    S.z = [Math.max(-E, Math.min(E, S.z[0] + dz[0])), Math.max(-E, Math.min(E, S.z[1] + dz[1]))];
+    S.z = [clampZ(S.z[0] + dz[0]), clampZ(S.z[1] + dz[1])];
     scheduleMain();
   });
   document.querySelectorAll("[data-mode]").forEach((b) => b.addEventListener("click", () => {
@@ -489,11 +588,28 @@ function drawMini() {
 
 function setText(id, t) { $("#" + id).textContent = t; }
 
+function showClassifier() {
+  const bars = $("#bars"), note = $("#cls-note"), ev = meta.eval || {};
+  if (!meta.classifier) {
+    bars.hidden = true;
+    setText("cls-title", "Classifier");
+    note.innerHTML = `This model has no classifier: it never saw a label. Even so, a nearest-neighbour vote on its codes labels <b>${pct(ev.knn10_acc)}</b> of test digits correctly. Switch to an α model to see a classifier's prediction here.`;
+    return;
+  }
+  $("#cls-title").innerHTML = `Classifier head, reading <span class="nt">μ</span>`;
+  if (!S.enc) { bars.hidden = true; note.textContent = "Draw a digit to see the prediction."; return; }
+  const p = classify(S.enc.mu), top = p.indexOf(Math.max(...p));
+  bars.hidden = false;
+  bars.innerHTML = Array.from(p, (v, k) => `<div><i style="height:${Math.max(2, v * 100)}%;background:${PAL[k]};opacity:${k === top ? 1 : 0.45}"></i><span>${k}</span></div>`).join("");
+  note.innerHTML = `Predicts <b>${top}</b> with ${(p[top] * 100).toFixed(0)}% probability. This head gets <b>${pct(ev.head_acc)}</b> of test digits right.`;
+}
+
 function clearOutputs() {
   S.enc = null; S.samples = [];
   ["seen", "recon", "samp"].forEach((id) => paintDigit(id, null));
   ["mu0", "mu1", "sg0", "sg1", "ep0", "ep1", "zz0", "zz1", "rec", "kl", "elbo"].forEach((id) => setText(id, "—"));
   setText("seen-cap", "x: what the encoder sees (28×28)");
+  showClassifier();
   drawMini();
 }
 
@@ -511,6 +627,7 @@ function runEncoder() {
   setText("sg0", fmt(sigma[0], 3)); setText("sg1", fmt(sigma[1], 3));
   S.kl = 0.5 * (sigma[0] ** 2 + sigma[1] ** 2 + mu[0] ** 2 + mu[1] ** 2 - 2 - lv[0] - lv[1]);
   setText("kl", fmt(S.kl, 1));
+  showClassifier();
   addSample();
 }
 
@@ -582,15 +699,18 @@ function initPad() {
   }));
 }
 
-// ---------- Section 3: training stats ----------
+// ---------- Section 3: training stats and model comparison ----------
+const modelName = (m) => (m.training.alpha ? `VAE + classifier, α = ${m.training.alpha}` : "Unsupervised VAE");
+
 function initStats() {
   const t = meta.training;
   setText("t-epochs", t.epochs);
+  setText("t-alpha", t.alpha ? `, jointly with the linear classifier at α = ${t.alpha}` : "");
   setText("t-elbo", fmt(t.test_elbo, 1));
   setText("t-rec", fmt(t.test_recon, 1));
   setText("t-kl", fmt(t.test_kl, 1));
   const h = t.history.map((r) => r.test_elbo), lo = Math.min(...h), hi = Math.max(...h);
-  const X = (i) => 34 + (i / (h.length - 1)) * 278, Y = (v) => 10 + (1 - (v - lo) / (hi - lo || 1)) * 62;
+  const X = (i) => 34 + (i / Math.max(1, h.length - 1)) * 278, Y = (v) => 10 + (1 - (v - lo) / (hi - lo || 1)) * 62;
   const pts = h.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ");
   $("#curve").innerHTML =
     `<line x1="34" y1="72" x2="312" y2="72" stroke="var(--line)"/>` +
@@ -601,7 +721,76 @@ function initStats() {
     `<text x="312" y="86" text-anchor="end" font-size="9" fill="var(--muted)">epoch ${h.length} · test ELBO (higher is better)</text>`;
 }
 
-// ---------- Startup ----------
+function buildTable() {
+  const tb = $("#cmp tbody");
+  tb.innerHTML = MODELS.map((n) => {
+    const m = store[n].meta, t = m.training, ev = m.eval || {};
+    return `<tr data-row="${n}"><th>${t.alpha ? "α = " + t.alpha : "Unsupervised"}</th><td>${fmt(t.test_elbo, 1)}</td><td>${fmt(t.test_recon, 1)}</td>` +
+           `<td>${fmt(t.test_kl, 1)}</td><td>${pct(ev.knn10_acc)}</td><td>${m.classifier ? pct(ev.head_acc) : "—"}</td></tr>`;
+  }).join("");
+  tb.querySelectorAll("tr").forEach((tr) => tr.addEventListener("click", () => selectModel(tr.dataset.row)));
+}
+
+function describeModel() {
+  const t = meta.training, ev = meta.eval || {};
+  $("#model-desc").innerHTML = t.alpha
+    ? `<b>${modelName(meta)}.</b> Trained on the ELBO plus ${t.alpha} × the classification loss of a linear classifier reading z, so it sees labels. Shading on the maps shows the classifier's decision regions.`
+    : `<b>Unsupervised VAE.</b> Trained only to reconstruct images (the ELBO). It never saw a label; the colours are added afterwards.`;
+  $("#region-hint").hidden = !meta.classifier;
+  document.querySelectorAll("[data-model]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.model === current));
+  document.querySelectorAll("#cmp tbody tr").forEach((tr) => tr.setAttribute("aria-current", tr.dataset.row === current));
+}
+
+// ---------- Loading and switching models ----------
+async function fetchOk(url, kind) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url.split("?")[0]}: HTTP ${r.status}`);
+  return r[kind]();
+}
+
+async function ensureWeights(name) {
+  const m = store[name];
+  if (m.W) return;
+  const buf = await fetchOk(`vae-explorer/models/${name}/weights.bin?v=2`, "arrayBuffer");
+  const u16 = new Uint16Array(buf, 0, m.meta.samples.byteOffset / 2), Wn = {};
+  for (const t of m.meta.tensors) {
+    const n = t.shape.reduce((a, b) => a * b, 1), a = new Float32Array(n);
+    for (let i = 0; i < n; i++) a[i] = half(u16[t.offset + i]);
+    Wn[t.name] = { data: a, shape: t.shape };
+  }
+  m.W = Wn;
+  m.testDigits = new Uint8Array(buf, m.meta.samples.byteOffset, m.meta.samples.count * 784);
+}
+
+async function selectModel(name) {
+  if (!store[name]) return;
+  const token = ++S.loadToken;
+  document.querySelectorAll("[data-model]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.model === name));
+  try {
+    await ensureWeights(name);
+  } catch (err) {
+    $("#status").hidden = false;
+    $("#status").textContent = `Couldn't load that model (${err.message}). Try reloading the page.`;
+    return;
+  }
+  if (token !== S.loadToken) return;
+  current = name;
+  ({ meta, W, testDigits } = store[name]);
+  scatter = meta.scatter; E = meta.extent; MAIN = { cx: 0, cy: 0, h: E };
+  S.layers = {}; S.gridProbs = null; S.gridCanvas = null;
+  S.z = [clampZ(S.z[0]), clampZ(S.z[1])];
+  describeModel();
+  initStats();
+  if (!S.started) {
+    S.started = true;
+    startUI();
+  } else {
+    updateMain();
+    runEncoder();
+  }
+  if (location.hash.slice(1) !== name) history.replaceState(null, "", name === "alpha-0" ? location.pathname : "#" + name);
+}
+
 function redrawAll() {
   S.layers = {};
   S.gridCanvas = null;
@@ -610,11 +799,9 @@ function redrawAll() {
   drawMini();
 }
 
-function init() {
-  readTheme();
+function startUI() {
   initMap();
   initPad();
-  initStats();
   fitCanvas($("#map")); fitCanvas($("#mini"));
   updateMain();
   loadTestDigit();
@@ -634,24 +821,19 @@ function init() {
 }
 
 async function load() {
+  readTheme();
   try {
-    const get = (f, kind) => fetch(`vae-explorer/${f}?v=1`).then((r) => { if (!r.ok) throw new Error(`${f}: HTTP ${r.status}`); return r[kind](); });
-    const [m, buf] = await Promise.all([get("model.json", "json"), get("weights.bin", "arrayBuffer")]);
-    meta = m; E = m.extent; MAIN = { cx: 0, cy: 0, h: E }; scatter = m.scatter;
-    const u16 = new Uint16Array(buf, 0, m.samples.byteOffset / 2);
-    W = {};
-    for (const t of m.tensors) {
-      const n = t.shape.reduce((a, b) => a * b, 1), a = new Float32Array(n);
-      for (let i = 0; i < n; i++) a[i] = half(u16[t.offset + i]);
-      W[t.name] = { data: a, shape: t.shape };
-    }
-    testDigits = new Uint8Array(buf, m.samples.byteOffset, m.samples.count * 784);
+    const metas = await Promise.all(MODELS.map((n) => fetchOk(`vae-explorer/models/${n}/model.json?v=2`, "json")));
+    MODELS.forEach((n, i) => { store[n] = { meta: metas[i] }; });
   } catch (err) {
-    $("#status").textContent = `Couldn't load the model (${err.message}). Try reloading the page.`;
+    $("#status").textContent = `Couldn't load the models (${err.message}). Try reloading the page.`;
     return;
   }
-  $("#status").hidden = true;
-  init();
+  buildTable();
+  document.querySelectorAll("[data-model]").forEach((b) => b.addEventListener("click", () => selectModel(b.dataset.model)));
+  const first = MODELS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "alpha-0";
+  await selectModel(first);
+  if (S.started) $("#status").hidden = true;
 }
 load();
 </script>
