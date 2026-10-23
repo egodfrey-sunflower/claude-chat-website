@@ -36,6 +36,8 @@
   .badge.warn { background: color-mix(in srgb, #c0392b 16%, transparent); color: #d9584a; }
   .entry p { margin: .35rem 0 0; }
   .entry b { font: 700 .8rem system-ui, sans-serif; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-right: .3rem; }
+  .src { font: .8rem system-ui, sans-serif; }
+  .src a { color: var(--accent); }
   .none { color: var(--muted); text-align: center; padding: 2rem 0; }
   section.terms { margin-top: 3rem; }
   section.terms h2 { color: var(--accent); font-size: 1.3rem; }
@@ -71,7 +73,7 @@
     <h2>Words worth knowing</h2>
     <dl>
       <dt>Ancient woodland</dt>
-      <dd>In England and Wales, land that has been continuously wooded since at least 1600 (1750 in Scotland). It covers only a few per cent of Britain but holds a disproportionate share of its woodland wildlife.</dd>
+      <dd>In England and Wales, land that has been continuously wooded since at least 1600 (1750 in Scotland) (<a style="color:var(--accent)" href="https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/habitats/ancient-woodland/">Woodland Trust</a>). It covers only a few per cent of Britain but holds a disproportionate share of its woodland wildlife.</dd>
       <dt>Ancient woodland indicator</dt>
       <dd>A plant that spreads so slowly, or needs such undisturbed soil, that finding it suggests a wood is old. Examples are wood anemone, bluebell, small-leaved lime and wild garlic. It's a clue, not a proof.</dd>
       <dt>Archaeophyte</dt>
@@ -93,7 +95,7 @@
     </dl>
   </section>
 
-  <p class="note">This is a general-interest guide, not a foraging manual. Several plants here are seriously poisonous (and some look like edible ones), and many wild plants are protected. Only pick or eat what you have identified with certainty and are allowed to take. Never dig up wild plants.</p>
+  <p class="note">Facts were checked against Woodland Trust, Plantlife, BSBI, Trees for Life, RHS, Wikipedia and news sources in October 2026. Sources are listed under each entry. This is a general-interest guide, not a foraging manual. Several plants here are seriously poisonous (and some look like edible ones), and many wild plants are protected. Only pick or eat what you have identified with certainty and are allowed to take. Never dig up wild plants.</p>
 </main>
 <footer>
   Made with Claude, 23 October 2026 · <a href="../british-wildlife.html">Wild Britain</a> · <a href="../../../index.html">All pages</a>
@@ -108,7 +110,7 @@ const PLANTS = [
   { name: "Ash", latin: "Fraxinus excelsior", type: "tree", emoji: "🌳", status: "Native", season: "Keys hang Aug–winter", habitat: "Woods, hedgerows, limestone dales",
     spot: "Pinnate leaves, sooty-black buds that look like little hooves, and bunches of winged 'keys' in autumn.",
     story: "It was one of Britain's commonest trees until ash dieback, a fungal disease confirmed here in 2012, which is expected to kill most of them. Researchers are breeding from the few per cent of trees that show tolerance. In Norse myth, Yggdrasil, the world tree, was an ash." },
-  { name: "Beech", latin: "Fagus sylvatica", type: "tree", emoji: "🌳", status: "Native (south-east)", season: "Leaves turn copper Oct–Nov", habitat: "Chalk and limestone; the Chilterns, South Downs, Cotswolds",
+  { name: "Beech", latin: "Fagus sylvatica", type: "tree", emoji: "🌳", status: "Native (south-east England & Wales)", season: "Leaves turn copper Oct–Nov", habitat: "Chalk and limestone; the Chilterns, South Downs, Cotswolds",
     spot: "Smooth, elephant-grey bark. Oval leaves with silky hairs on a wavy edge. Long, pointed, cigar-shaped buds. Prickly husks hold triangular 'beechmast' nuts.",
     story: "Its canopy casts such deep shade that little grows beneath it, which gives beechwoods their cathedral feel. Burnham Beeches has ancient pollards several centuries old. Beech hedges hold their dead leaves all winter." },
   { name: "Elm", latin: "Ulmus spp.", type: "tree", emoji: "🌳", status: "Native / ancient introduction", season: "Papery seeds in spring", habitat: "Hedgerows (now mostly as suckers)",
@@ -116,7 +118,7 @@ const PLANTS = [
     story: "From the late 1960s, Dutch elm disease killed an estimated 25 million or more elms in Britain and changed the lowland landscape seen in Constable's paintings. Brighton, isolated between the Downs and the sea, still holds a famous population of mature elms." },
   { name: "English (pedunculate) oak", latin: "Quercus robur", type: "tree", emoji: "🌳", status: "Native", season: "Acorns Sep–Oct", habitat: "Lowland woods, parkland, hedgerows",
     spot: "Lobed leaves on almost no stalk, while the acorns sit on long stalks (peduncles). Sessile oak is the reverse.",
-    story: "A 2019 study counted over 2,300 species associated with native oaks, and 326 that depend on them entirely. That is more than any other British tree. Sherwood's Major Oak is thought to be 800–1,100 years old." },
+    story: "A 2019 study counted over 2,300 species associated with native oaks, and 326 that depend on them entirely. That is more than any other British tree. Sherwood's Major Oak, thought to be 800–1,200 years old, was declared dead in 2026 after it failed to come into leaf." },
   { name: "Holly", latin: "Ilex aquifolium", type: "tree", emoji: "🎄", status: "Native", season: "Berries Nov–Feb", habitat: "Woodland understorey, hedges",
     spot: "Glossy evergreen leaves. They are spiny low down but often smooth higher up, out of reach of browsing deer.",
     story: "Trees are either male or female, and only females berry. Hedge-layers traditionally left hollies uncut, partly from superstition and partly as landmarks for the plough." },
@@ -157,13 +159,13 @@ const PLANTS = [
     story: "It isn't one species. Over 300 'microspecies' are recognised in Britain, most of which set seed without sex. Folklore says not to pick blackberries after Michaelmas (29 September), because the devil has spat on them. It is a superb wildlife shrub for nesting birds, pollinators and dormice." },
   { name: "Broom", latin: "Cytisus scoparius", type: "shrub", emoji: "💛", status: "Native", season: "Flowers Apr–Jun", habitat: "Heaths, sandy banks, railway cuttings",
     spot: "Almost leafless green, ribbed stems with big yellow pea flowers. Unlike gorse, it has no spines.",
-    story: "Its medieval Latin name, planta genista, gave the Plantagenet kings their name, because Geoffrey of Anjou wore a sprig of it. Its seed pods crack open audibly on hot days." },
+    story: "Geoffrey of Anjou, father of Henry II, was nicknamed after its Latin name, planta genista, supposedly because he wore a sprig of it. His descendants only took up 'Plantagenet' as a surname about three centuries later. Its seed pods crack open audibly on hot days." },
   { name: "Butcher's broom", latin: "Ruscus aculeatus", type: "shrub", emoji: "🌿", status: "Native", season: "Red berries autumn–winter", habitat: "Dry woods in southern England",
     spot: "A stiff, low evergreen with spine-tipped 'leaves'. Tiny flowers and red berries grow from the middle of the leaf itself.",
-    story: "The 'leaves' are really flattened stems called cladodes, which is why a flower can grow out of one. Butchers once bundled the twigs into brooms to scrub their blocks." },
+    story: "The 'leaves' are really flattened stems called cladodes, which is why a flower can grow out of one. Butchers once bundled the twigs into brooms to scrub their blocks. Only female plants berry." },
   { name: "Dog rose", latin: "Rosa canina", type: "shrub", emoji: "🌹", status: "Native", season: "Flowers Jun–Jul; hips Sep–Nov", habitat: "Hedgerows, scrub",
     spot: "Long arching stems with hooked thorns, five-petalled pale pink flowers, then scarlet oval hips.",
-    story: "During the Second World War, when citrus imports dried up, volunteers collected hundreds of tons of rosehips. They were made into vitamin C syrup for children. The hairs inside the hips were the original itching powder." },
+    story: "During the Second World War, when citrus imports dried up, volunteers, many of them schoolchildren, collected hundreds of tons of rosehips a year. They were made into vitamin C syrup for children. The hairs inside the hips were the original itching powder." },
   { name: "Elder", latin: "Sambucus nigra", type: "shrub", emoji: "🌼", status: "Native", season: "Flowers Jun; berries Aug–Sep", habitat: "Hedges, waste ground, near badger setts and rabbit warrens",
     spot: "Corky, furrowed bark. Pinnate leaves that smell rank when crushed. Flat plates of creamy, musky flowers, then drooping bunches of black berries.",
     story: "It gives us elderflower cordial and elderberry wine, but the raw berries, leaves and stems can make you ill. Folklore says the Elder Mother lives in the tree. She had to be asked before you cut it, and burning the wood brought bad luck." },
@@ -172,16 +174,16 @@ const PLANTS = [
     story: "Between common gorse and the two smaller species, some gorse is nearly always in bloom, hence the saying 'When gorse is out of blossom, kissing's out of fashion.' It used to be cut for fuel, hedging and animal feed." },
   { name: "Hawthorn", latin: "Crataegus monogyna", type: "shrub", emoji: "🌸", status: "Native", season: "May blossom; haws Sep–Nov", habitat: "Hedgerows, scrub, downland",
     spot: "Thorny, with small deeply lobed leaves. Heavily scented white (sometimes pink) 'May' blossom appears after the leaves, then deep red haws.",
-    story: "It is the backbone of British hedgerows, and huge lengths of it were planted under the Enclosure Acts. It is so tied to May Day that 'Ne'er cast a clout till May be out' may mean the blossom rather than the month. The Glastonbury Thorn flowers twice a year." },
+    story: "It is the backbone of British hedgerows, and huge lengths of it were planted under the Enclosure Acts. It is so tied to May Day that 'Ne'er cast a clout till May be out' may mean the blossom rather than the month. Glastonbury Thorns flower twice a year, in winter and spring." },
   { name: "Hazel", latin: "Corylus avellana", type: "shrub", emoji: "🌰", status: "Native", season: "Catkins Jan–Mar; nuts Sep", habitat: "Woodland understorey, hedges",
     spot: "Yellow 'lamb's tail' catkins in late winter. Look closely for the tiny crimson female flowers, like sea anemones, on the same twig. Rounded, soft, hairy leaves.",
-    story: "It was the classic coppice tree, cut for hurdles, thatching spars and wattle-and-daub. Hazel coppice is the stronghold of the hazel dormouse, which opens nuts with a distinctive neat round hole." },
+    story: "It was the classic coppice tree, cut for hurdles, thatching spars and wattle-and-daub. Hazel coppice is the stronghold of the hazel dormouse, which opens nuts with a neat round hole that has a smooth inner rim." },
   { name: "Heather (ling)", latin: "Calluna vulgaris", type: "shrub", emoji: "💜", status: "Native", season: "Flowers Aug–Sep", habitat: "Moorland, heaths, bogs",
     spot: "A low, wiry evergreen with tiny overlapping scale-leaves and spikes of small pink-purple flowers. Bell heather has larger, darker bells.",
     story: "Britain holds a large share of the world's heather moorland, which is shaped by grazing and, controversially, by burning for grouse shooting. Heather honey is so thick that it sets like jelly and has to be pressed from the comb." },
   { name: "Ivy", latin: "Hedera helix", type: "shrub", emoji: "🍃", status: "Native", season: "Flowers Sep–Nov; berries winter", habitat: "Woods, walls, old trees",
     spot: "Evergreen climber with lobed leaves on the climbing stems and unlobed oval leaves on the flowering shoots up top. It clings by tiny aerial roots.",
-    story: "It doesn't strangle healthy trees. It is among the most valuable wildlife plants, flowering when almost nothing else does. The ivy bee, which first reached Britain in 2001, depends on it. Its berries feed birds in late winter." },
+    story: "It doesn't strangle healthy trees. It is among the most valuable wildlife plants, flowering when almost nothing else does. The ivy bee, first recorded in Britain in 2001, depends on it. Its berries feed birds in late winter." },
   { name: "Juniper", latin: "Juniperus communis", type: "shrub", emoji: "🌲", status: "Native", season: "Berries take 2–3 years to ripen", habitat: "Chalk downs, Highland moors and pinewoods",
     spot: "A prickly conifer with whorls of three sharp needles, each with a white band, and blue-black 'berries'.",
     story: "It is one of only three native conifers, with Scots pine and yew. The 'berries' are actually fleshy cones, and they flavour gin. It is declining in southern England, partly because seedlings need bare ground and grazing has changed." },
@@ -190,7 +192,7 @@ const PLANTS = [
     story: "It is a hemiparasite that makes its own sugars but takes water from its host. Birds such as the mistle thrush and blackcap spread the seeds, either by wiping their sticky beaks on bark or in their droppings. Pliny wrote of druids cutting it from oaks with a golden sickle." },
   { name: "Rhododendron (ponticum)", latin: "Rhododendron ponticum", type: "shrub", emoji: "💜", status: "Invasive", season: "Flowers May–Jun", habitat: "Acid woods, especially in the wet west",
     spot: "Big evergreen leathery leaves and showy purple flower trusses. It forms dense thickets.",
-    story: "The Victorians planted it as game cover and an ornamental. It now smothers native woodland, is toxic to grazers, and hosts the Phytophthora pathogens behind sudden oak death. Clearing it from Snowdonia and the Scottish rainforest is a major conservation effort." },
+    story: "The Victorians planted it as game cover and an ornamental. It now smothers native woodland, is toxic to grazers, and spreads the pathogens Phytophthora ramorum and P. kernoviae. In the US, P. ramorum causes 'sudden oak death'. In Britain it has killed thousands of hectares of larch. Clearing it from Snowdonia and the Scottish rainforest is a major conservation effort." },
   { name: "Spindle", latin: "Euonymus europaeus", type: "shrub", emoji: "🎀", status: "Native", season: "Fruit Sep–Nov", habitat: "Hedgerows and woods on chalk and limestone",
     spot: "Inconspicuous most of the year, then startling in autumn. Its four-lobed shocking-pink fruits split open to show bright orange seeds.",
     story: "Its hard, fine-grained wood made the spindles for spinning wool, as well as skewers and pegs. It is poisonous. It is one of the best hedge clues to chalk or limestone underfoot." },
@@ -228,7 +230,7 @@ const PLANTS = [
     story: "It was Wordsworth's favourite flower, and he wrote three poems to it. His memorial in Grasmere church was meant to show it, but the carving shows greater celandine, an unrelated plant." },
   { name: "Marsh marigold (kingcup)", latin: "Caltha palustris", type: "flower", emoji: "🌼", status: "Native", season: "Flowers Mar–Jun", habitat: "Wet meadows, ditches, stream edges",
     spot: "Large, glossy, buttercup-like gold flowers above big kidney-shaped leaves, on wet ground.",
-    story: "It is thought to be one of our most ancient native plants, one that survived the Ice Age here. In some places it was hung over doorways on May Day to keep away evil. Like many buttercup relatives, it is poisonous." },
+    story: "It may be one of our oldest native plants, possibly here since before the last Ice Age. In some places it was hung over doorways on May Day to keep away evil. Like many buttercup relatives, it is poisonous." },
   { name: "Meadowsweet", latin: "Filipendula ulmaria", type: "flower", emoji: "☁️", status: "Native", season: "Flowers Jun–Sep", habitat: "Wet meadows, ditches, riverbanks",
     spot: "Frothy cream heads of tiny flowers with an almondy, honeyed scent, on reddish stems.",
     story: "In the 1830s chemists isolated salicylic acid from its flower buds. When Bayer launched aspirin in 1899, the name came from 'a' (acetyl) plus Spiraea, its old genus name. It was also a favourite Tudor strewing herb for scenting floors." },
@@ -249,7 +251,7 @@ const PLANTS = [
     story: "Bog soils are starved of nitrogen, so it traps and digests insects instead. Darwin experimented on it obsessively for his book Insectivorous Plants. Look closely and you may see a trapped midge." },
   { name: "Thrift (sea pink)", latin: "Armeria maritima", type: "flower", emoji: "🌸", status: "Native", season: "Flowers Apr–Aug", habitat: "Sea cliffs, salt marsh, mountain tops",
     spot: "Cushions of grassy leaves topped by round pink pompom flowers on bare stalks. It carpets cliff tops in late spring.",
-    story: "It shrugs off salt spray and even grows on soils laced with heavy metals around old mines. It appeared on the back of the brass threepenny bit from 1937." },
+    story: "It shrugs off salt spray and even grows on soils laced with heavy metals around old mines. It appeared on the back of George VI's brass threepenny bit, from 1937 to 1952." },
   { name: "Wild garlic (ramsons)", latin: "Allium ursinum", type: "flower", emoji: "🧄", status: "Native", season: "Leaves Feb–Apr; flowers Apr–Jun", habitat: "Damp, shady woods, often with bluebells",
     spot: "Broad, bright-green leaves, and starry white flowers in round heads. Above all, the garlic smell. Lily of the valley, which is deadly, has similar leaves but no smell.",
     story: "'Ursinum' means 'of bears', who are said to dig up the bulbs after hibernation. It is a popular forage, but crush a leaf and smell it every time. Another ancient woodland indicator." },
@@ -260,6 +262,184 @@ const PLANTS = [
     spot: "Yellow snapdragon-like flowers in inflated green cups. The seeds rattle inside the dry pods.",
     story: "It is called the 'meadow maker' because it is a hemiparasite on grass roots. Sowing it weakens vigorous grasses and lets wildflowers in. Farmers used the rattling pods as a sign that hay was ready to cut." },
 ];
+
+const SOURCES = {
+"Alder": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/alder/"
+],
+"Ash": [
+"https://www.woodlandtrust.org.uk/publications/2019/06/ash-dieback-position-statement/",
+"https://www.forestresearch.gov.uk/tools-and-resources/fthr/pest-and-disease-resources/ash-dieback-hymenoscyphus-fraxineus/"
+],
+"Elm": [
+"https://www.countrylife.co.uk/nature/britain-lost-25-million-of-its-graceful-giants-the-elm-tree-but-theres-finally-real-hope-that-they-are-coming-back-276025",
+"https://en.wikipedia.org/wiki/Dutch_elm_disease"
+],
+"English (pedunculate) oak": [
+"https://www.hutton.ac.uk/node/15936",
+"https://www.countryfile.com/wildlife/trees-plants/robin-hood-world-famous-major-oak-is-dead"
+],
+"Holly": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/holly/",
+"https://treesforlife.org.uk/forest/mythology-folklore/holly2/"
+],
+"Rowan": [
+"https://treesforlife.org.uk/into-the-forest/trees-plants-animals/trees/rowan/rowan-facts/"
+],
+"Scots pine": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/scots-pine/",
+"https://treesforlife.org.uk/scotlands-oldest-wild-pine-saved/"
+],
+"Sessile oak": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/sessile-oak/"
+],
+"Silver birch": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/silver-birch/"
+],
+"Small-leaved lime": [
+"https://fowa.org.uk/blog/celebrating-westonbirts-2000-year-old-lime-by-katrina-podlewska-communications-manager",
+"https://en.wikipedia.org/wiki/British_wildwood"
+],
+"Sycamore": [
+"https://www.cps.gov.uk/node/26840",
+"https://en.wikipedia.org/wiki/Sycamore_Gap_tree"
+],
+"Wild cherry": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/wild-cherry/"
+],
+"Yew": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/yew/",
+"https://en.wikipedia.org/wiki/Fortingall_Yew"
+],
+"Blackthorn": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/blackthorn/"
+],
+"Bramble": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/bramble/"
+],
+"Broom": [
+"https://en.wikipedia.org/wiki/House_of_Plantagenet"
+],
+"Butcher's broom": [
+"https://en.wikipedia.org/wiki/Ruscus_aculeatus"
+],
+"Dog rose": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/dog-rose/",
+"https://www.mylearning.org/resources/girl-guides-norfolk-national-rose-hip-collection"
+],
+"Elder": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/elder/"
+],
+"Gorse": [
+"https://www.plantlife.org.uk/plants-and-fungi/gorse/",
+"https://en.wikipedia.org/wiki/Ulex"
+],
+"Hawthorn": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/hawthorn/"
+],
+"Hazel": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/hazel/"
+],
+"Heather (ling)": [
+"https://www.gwct.org.uk/blogs/uplands-blog/2020/april/how-much-upland-heather-moorland-is-in-the-uk/",
+"https://en.wikipedia.org/wiki/Heather_honey"
+],
+"Ivy": [
+"https://www.bwars.com/bee/colletidae/colletes-hederae",
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/ivy/"
+],
+"Juniper": [
+"https://www.plantlife.org.uk/plants-and-fungi/juniper/",
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/juniper/"
+],
+"Mistletoe": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/mistletoe/",
+"https://en.wikipedia.org/wiki/Viscum_album"
+],
+"Rhododendron (ponticum)": [
+"https://www.rhs.org.uk/disease/phytophthora-ramorum-and-pkernoviae"
+],
+"Spindle": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/british-trees/a-z-of-british-trees/spindle/"
+],
+"Bluebell": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/bluebell/",
+"https://www.plantlife.org.uk/plants-and-fungi/bluebell/"
+],
+"Cowslip": [
+"https://www.plantlife.org.uk/plants-and-fungi/cowslip/"
+],
+"Foxglove": [
+"https://en.wikipedia.org/wiki/William_Withering"
+],
+"Harebell": [
+"https://www.plantlife.org.uk/plants-and-fungi/harebell/"
+],
+"Lady's slipper orchid": [
+"https://www.plantlife.org.uk/plants-and-fungi/ladys-slipper/",
+"https://en.wikipedia.org/wiki/Cypripedium_calceolus"
+],
+"Lesser celandine": [
+"https://www.plantlife.org.uk/plants-and-fungi/lesser-celandine/",
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/lesser-celandine/"
+],
+"Marsh marigold (kingcup)": [
+"https://www.plantlife.org.uk/plants-and-fungi/marsh-marigold/"
+],
+"Meadowsweet": [
+"https://en.wikipedia.org/wiki/History_of_aspirin"
+],
+"Pasqueflower": [
+"https://www.plantlife.org.uk/plants-and-fungi/pasqueflower/",
+"https://en.wikipedia.org/wiki/Pulsatilla_vulgaris"
+],
+"Primrose": [
+"https://www.plantlife.org.uk/plants-and-fungi/primrose/",
+"https://en.wikipedia.org/wiki/Primrose_Day"
+],
+"Snowdrop": [
+"https://www.plantlife.org.uk/plants-and-fungi/snowdrop/",
+"https://en.wikipedia.org/wiki/Galanthus_nivalis"
+],
+"Sundew": [
+"https://darwin-online.org.uk/converted/pdf/1875_Insectivorous_F1217.pdf"
+],
+"Thrift (sea pink)": [
+"https://www.plantlife.org.uk/plants-and-fungi/thrift/",
+"https://en.wikipedia.org/wiki/Brass_threepence"
+],
+"Wild garlic (ramsons)": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/wild-garlic/"
+],
+"Wood anemone": [
+"https://www.woodlandtrust.org.uk/trees-woods-and-wildlife/plants/wild-flowers/wood-anemone/"
+],
+"Yellow rattle": [
+"https://www.plantlife.org.uk/plants-and-fungi/yellow-rattle/"
+],
+"Beech": [
+"https://en.wikipedia.org/wiki/Fagus_sylvatica"
+],
+"Horse chestnut": [
+"https://en.wikipedia.org/wiki/Aesculus_hippocastanum"
+],
+"Bee orchid": [
+"https://en.wikipedia.org/wiki/Ophrys_apifera"
+],
+"Common poppy": [
+"https://en.wikipedia.org/wiki/Papaver_rhoeas"
+],
+"Ghost orchid": [
+"https://en.wikipedia.org/wiki/Epipogium_aphyllum"
+],
+"Himalayan balsam": [
+"https://en.wikipedia.org/wiki/Impatiens_glandulifera"
+],
+"Snake's head fritillary": [
+"https://en.wikipedia.org/wiki/Fritillaria_meleagris",
+"https://www.wiltshirewildlife.org/north-meadow"
+]
+};
 
 const NONNATIVE = s => /introduced|invasive|archaeophyte/i.test(s);
 const list = document.getElementById("list"), q = document.getElementById("q"), countEl = document.getElementById("count");
@@ -286,6 +466,7 @@ function render() {
       <p><b>Where</b>${esc(p.habitat)}</p>
       <p><b>Spot it</b>${esc(p.spot)}</p>
       <p><b>Why it's interesting</b>${esc(p.story)}</p>
+      <p class="src"><b>Sources</b>${(SOURCES[p.name]||[]).map(u => `<a href="${esc(u)}" rel="noopener">${esc(new URL(u).hostname.replace(/^www\./, ""))}</a>`).join(" · ")}</p>
     </article>`;
   }
   list.innerHTML = html;
