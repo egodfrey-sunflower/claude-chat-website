@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zarr, visually</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --fg: #1d1d1f; --bg: #fafaf8; --card: #ffffff; --muted: #6b6b70; --line: #e2e2dd;
+    --accent: #b4532a; --accent-soft: rgba(180, 83, 42, .2); --code: #f2f1ec;
+    --chunkS: 62%; --chunkL: 80%; --pad: #ebebe7; --tone1: #e9e7e0; --tone2: #d9d6cc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fg: #ececec; --bg: #161617; --card: #1f1f21; --muted: #9a9aa0; --line: #313134;
+      --accent: #e08a5f; --accent-soft: rgba(224, 138, 95, .25); --code: #252528;
+      --chunkS: 42%; --chunkL: 33%; --pad: #29292c; --tone1: #2a2a2d; --tone2: #38383c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 system-ui, -apple-system, sans-serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2.2rem 1rem 4rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 .3rem; line-height: 1.2; }
+  h2 { font-size: 1.25rem; margin: 0 0 .4rem; }
+  .lede { color: var(--muted); margin: 0 0 1.8rem; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1rem 1.2rem; margin: 0 0 1.5rem; }
+  section > p { margin: .3rem 0 .8rem; }
+  .num { display: inline-block; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--accent); color: var(--bg); text-align: center; font-size: .9rem; line-height: 1.6rem; margin-right: .4rem; font-weight: 600; vertical-align: 1px; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .85em; }
+  code { background: var(--code); padding: .05em .3em; border-radius: 4px; }
+  pre { background: var(--code); padding: .7rem .8rem; border-radius: 8px; overflow-x: auto; margin: .5rem 0; font-size: .78rem; line-height: 1.45; }
+  .muted { color: var(--muted); }
+  .small { font-size: .85rem; }
+  .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: .6rem 0; }
+  button, select { font: inherit; font-size: .9rem; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: .35rem .7rem; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.on, button.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  button:disabled { opacity: .4; cursor: default; }
+  label.ctl { display: flex; align-items: center; gap: .4rem; font-size: .9rem; }
+  label.ctl input[type=range] { width: 6.5rem; accent-color: var(--accent); }
+  label.ctl output { font-variant-numeric: tabular-nums; min-width: 1.4rem; font-weight: 600; }
+  input[type=checkbox] { accent-color: var(--accent); }
+  .two { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 640px) { .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+
+  /* overview diagram */
+  #ov-svg { width: 100%; height: auto; display: block; }
+  #ov-svg text { fill: var(--fg); font-family: ui-monospace, Menlo, monospace; }
+  .ov-chunk { transition: transform .75s cubic-bezier(.45,.05,.2,1); }
+  .ov-cell { stroke: var(--card); stroke-width: 1; }
+  .ov-num { font-size: 8px; transition: opacity .3s; }
+  .ov-ctag { font-size: 8px; opacity: 0; transition: opacity .3s; }
+  .ov-storeg, .ov-ghost, .ov-read { opacity: 0; transition: opacity .5s; }
+  .ov-storebox { fill: none; stroke: var(--muted); stroke-dasharray: 4 3; }
+  .ov-metabox { fill: var(--code); stroke: var(--line); }
+  .ov-key { font-size: 9px; }
+  .ov-dim { fill: var(--muted) !important; }
+  .ov-label { font-size: 9px; fill: var(--muted) !important; font-family: system-ui, sans-serif !important; }
+  .ov-ghostcell { fill: none; stroke: var(--line); }
+  .ov-hlcell { fill: var(--accent); }
+  .ov-hlchunk { fill: none; stroke: var(--accent); stroke-width: 2; }
+  .ov-arrow { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+  #ov-svg[data-step="1"] .ov-ctag { opacity: 1; }
+  #ov-svg[data-step="2"] .ov-num, #ov-svg[data-step="3"] .ov-num { opacity: 0; }
+  #ov-svg[data-step="2"] .ov-storeg, #ov-svg[data-step="3"] .ov-storeg,
+  #ov-svg[data-step="2"] .ov-ghost, #ov-svg[data-step="3"] .ov-ghost, #ov-svg[data-step="3"] .ov-read { opacity: 1; }
+  .ov-chunk.hl .ov-cell { stroke: var(--accent); stroke-width: 3; }
+  .ov-keytxt.hl, .ov-meta.hl text { fill: var(--accent) !important; font-weight: 700; }
+  .ov-meta.hl rect { stroke: var(--accent); }
+  .stepper { display: flex; align-items: center; gap: .5rem; margin-top: .4rem; }
+  .dots { display: flex; gap: .35rem; flex: 1; justify-content: center; }
+  .dots span { width: .55rem; height: .55rem; border-radius: 50%; background: var(--line); }
+  .dots span.on { background: var(--accent); }
+  .caption { min-height: 4.8em; margin: .5rem 0 0; }
+
+  /* chunk grids */
+  .cgrid { display: grid; gap: 4px; width: 100%; margin: .4rem 0; touch-action: manipulation; }
+  .chunk { display: grid; gap: 1px; border-radius: 3px; transition: opacity .2s; }
+  .cell { aspect-ratio: 1; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: .62rem; font-family: ui-monospace, Menlo, monospace; cursor: pointer; user-select: none; -webkit-user-select: none; }
+  .cell.pad { background: repeating-linear-gradient(45deg, var(--pad) 0 3px, transparent 3px 6px); outline: 1px dashed var(--line); outline-offset: -1px; }
+  .chunk.sel { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+  .cell.cur { box-shadow: inset 0 0 0 2.5px var(--fg); }
+  .chunk.absent .cell:not(.pad) { opacity: .28; }
+  #st-grid { touch-action: none; }
+  .info { display: grid; grid-template-columns: auto 1fr; gap: .15rem .8rem; font-size: .88rem; margin: .5rem 0; }
+  .info dt { color: var(--muted); }
+  .info dd { margin: 0; font-family: ui-monospace, Menlo, monospace; font-size: .82rem; overflow-wrap: anywhere; }
+  .strip { display: flex; flex-wrap: wrap; gap: 2px; margin: .3rem 0; }
+  .strip span { height: 1.1rem; border-radius: 2px; font-size: .55rem; display: flex; align-items: center; justify-content: center; font-family: ui-monospace, Menlo, monospace; }
+  .strip span.cur { outline: 2px solid var(--fg); outline-offset: -1px; }
+
+  /* store */
+  .keys { list-style: none; margin: .3rem 0; padding: 0; font-family: ui-monospace, Menlo, monospace; font-size: .8rem; }
+  .keys li { display: flex; justify-content: space-between; gap: .8rem; padding: .18rem .4rem; border-bottom: 1px solid var(--line); border-radius: 4px; }
+  .keys li .sz { color: var(--muted); white-space: nowrap; }
+  .keys li.meta { color: var(--accent); }
+  .keys li.new { animation: flash 1s ease-out; }
+  @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+  details summary { cursor: pointer; font-size: .9rem; color: var(--muted); margin-top: .4rem; }
+
+  /* codec pipeline */
+  .stage { border: 1px solid var(--line); border-radius: 10px; padding: .6rem .7rem; margin: 0; animation: rise .35s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .stage h3 { font-size: .95rem; margin: 0 0 .1rem; display: flex; justify-content: space-between; gap: .5rem; flex-wrap: wrap; }
+  .stage h3 .t { font-weight: 500; color: var(--muted); font-size: .8rem; font-family: ui-monospace, Menlo, monospace; }
+  .stage .note { font-size: .82rem; color: var(--muted); margin: 0 0 .4rem; }
+  .arrow { text-align: center; color: var(--accent); font-size: 1.1rem; line-height: 1.6; }
+  .atable { display: inline-grid; gap: 1px; font-family: ui-monospace, Menlo, monospace; font-size: .68rem; }
+  .atable span { padding: .15rem .25rem; text-align: right; border-radius: 2px; min-width: 2.4em; }
+  .hex { display: grid; grid-template-columns: repeat(8, auto); justify-content: start; gap: 2px 3px; font-family: ui-monospace, Menlo, monospace; font-size: .74rem; }
+  @media (min-width: 560px) { .hex { grid-template-columns: repeat(16, auto); } }
+  .hex span { padding: 0 .12rem; border-radius: 3px; transition: background .25s, box-shadow .25s; }
+  .hex span.crc { background: var(--accent-soft); }
+  .hex span.hl { box-shadow: inset 0 0 0 2px var(--accent); }
+  .hex span.hl2 { background: var(--accent) !important; color: var(--bg); }
+
+  /* access */
+  #ac-canvas { width: 100%; max-width: 420px; aspect-ratio: 1; display: block; border-radius: 6px; cursor: crosshair; touch-action: manipulation; }
+  table.cost { border-collapse: collapse; width: 100%; font-size: .85rem; margin: .5rem 0; }
+  table.cost th, table.cost td { text-align: right; padding: .3rem .4rem; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  table.cost th:first-child, table.cost td:first-child { text-align: left; }
+  table.cost tr.on td { background: var(--accent-soft); }
+  .axis { font-size: .75rem; color: var(--muted); }
+
+  /* shard */
+  .shards { display: grid; gap: 10px; max-width: 360px; }
+  .shard { border: 2px solid var(--muted); border-radius: 8px; padding: 5px; cursor: pointer; }
+  .shard.sel { border-color: var(--accent); }
+  .shard .lbl { font-family: ui-monospace, Menlo, monospace; font-size: .72rem; color: var(--muted); margin: 0 0 3px 2px; }
+  .inners { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+  .inner { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border-radius: 3px; }
+  .inner.empty .cell { opacity: .25; }
+  .bar { display: flex; height: 1.8rem; border-radius: 6px; overflow: hidden; margin: .5rem 0 .2rem; border: 1px solid var(--line); }
+  .bar div { display: flex; align-items: center; justify-content: center; font-size: .62rem; font-family: ui-monospace, Menlo, monospace; min-width: 0; overflow: hidden; white-space: nowrap; border-right: 1px solid var(--card); }
+  .reqlog { font-family: ui-monospace, Menlo, monospace; font-size: .78rem; background: var(--code); border-radius: 8px; padding: .5rem .7rem; margin: .4rem 0; min-height: 2.4rem; }
+  .reqlog div { margin: .1rem 0; }
+  table.cmp { border-collapse: collapse; width: 100%; font-size: .85rem; }
+  table.cmp th, table.cmp td { text-align: left; padding: .35rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.cmp td code { font-size: .78rem; }
+  footer { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 2rem; }
+  footer a, section a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Zarr, visually</h1>
+  <p class="lede">Zarr stores big N-dimensional arrays as a pile of small, separately compressed chunks in any key/value store: a folder, S3, a zip file. It has no container format. The whole thing is JSON metadata plus a naming rule for chunk keys. Tap through the demos below. The bytes are computed live and follow the Zarr v3 spec.</p>
+
+  <!-- 1. Overview -->
+  <section id="overview">
+    <h2><span class="num">1</span>The big picture</h2>
+    <svg id="ov-svg" viewBox="0 0 360 236" data-step="0" role="img" aria-label="An array being cut into chunks and stored as keys"></svg>
+    <p class="caption" id="ov-cap"></p>
+    <div class="stepper">
+      <button id="ov-prev">◀ Back</button>
+      <div class="dots" id="ov-dots"></div>
+      <button id="ov-next" class="primary">Next ▶</button>
+    </div>
+  </section>
+
+  <!-- 2. Chunk grid explorer -->
+  <section id="explorer">
+    <h2><span class="num">2</span>Chunk grid explorer</h2>
+    <p>Pick an array shape and a chunk shape, then tap any element. You'll see which chunk holds it, which key that chunk is stored under, and where the element sits inside the chunk. Hatched cells are <em>padding</em>: edge chunks are always stored at full size, even where they overhang the array.</p>
+    <div class="row">
+      <label class="ctl">rows <input type="range" id="ex-R" min="1" max="12" value="7"><output id="ex-Ro"></output></label>
+      <label class="ctl">cols <input type="range" id="ex-C" min="1" max="12" value="10"><output id="ex-Co"></output></label>
+    </div>
+    <div class="row">
+      <label class="ctl">chunk rows <input type="range" id="ex-cr" min="1" max="6" value="3"><output id="ex-cro"></output></label>
+      <label class="ctl">chunk cols <input type="range" id="ex-cc" min="1" max="6" value="4"><output id="ex-cco"></output></label>
+      <label class="ctl">dtype <select id="ex-dt"><option>int8</option><option selected>int16</option><option>float32</option><option>float64</option></select></label>
+    </div>
+    <div id="ex-grid"></div>
+    <p class="small muted" id="ex-summary"></p>
+    <dl class="info" id="ex-info"></dl>
+    <div class="small muted" id="ex-striplbl"></div>
+    <div class="strip" id="ex-strip"></div>
+  </section>
+
+  <!-- 3. Store -->
+  <section id="store">
+    <h2><span class="num">3</span>Writing data: what lands in the store</h2>
+    <p>Drag across the array to write values. A chunk only exists in the store once it holds something other than <code>fill_value</code> (0 here). Faded chunks have no key, and reading them just returns zeros. Erase a chunk back to all zeros and zarr-python deletes its key by default.</p>
+    <div class="row">
+      <button id="st-write" class="on">✎ Write</button>
+      <button id="st-erase">⌫ Erase</button>
+      <button id="st-row">Write row 0</button>
+      <button id="st-all">Write all</button>
+      <button id="st-clear">Clear</button>
+    </div>
+    <div class="row">
+      <button id="st-grow">Grow to 8 × 16</button>
+      <label class="ctl">format <select id="st-fmt"><option value="v3">Zarr v3</option><option value="v2">Zarr v2</option></select></label>
+    </div>
+    <div class="two">
+      <div>
+        <div id="st-grid"></div>
+        <p class="small muted" id="st-shape"></p>
+      </div>
+      <div>
+        <div class="small muted">Keys in the store <span id="st-count"></span></div>
+        <ul class="keys" id="st-keys"></ul>
+        <p class="small muted">It's a flat key/value store. On a filesystem, each <code>/</code> in a key becomes a directory.</p>
+      </div>
+    </div>
+    <details>
+      <summary id="st-metasum">Show the array metadata</summary>
+      <pre id="st-meta"></pre>
+    </details>
+  </section>
+
+  <!-- 4. Codecs -->
+  <section id="codecs">
+    <h2><span class="num">4</span>The codec pipeline: one chunk, from array to stored bytes</h2>
+    <p>Every chunk passes through the array's <code>codecs</code> list, in order: any <b>array → array</b> codecs, then exactly <b>one array → bytes</b> codec, then any <b>bytes → bytes</b> codecs. Reading runs the same list backwards. Colours follow each value's original row, so you can watch the bytes get reordered.</p>
+    <div class="row">
+      <label class="ctl"><input type="checkbox" id="cd-tr"> transpose</label>
+      <label class="ctl">endian <select id="cd-end"><option>little</option><option>big</option></select></label>
+      <label class="ctl"><input type="checkbox" id="cd-gz" checked> gzip</label>
+      <label class="ctl"><input type="checkbox" id="cd-crc" checked> crc32c</label>
+    </div>
+    <div class="row">
+      <span class="small muted">chunk data:</span>
+      <button data-p="ramp" class="on">ramp 0…31</button>
+      <button data-p="same">all 1000</button>
+      <button data-p="random">random</button>
+    </div>
+    <details><summary>The <code>codecs</code> field in zarr.json for this setup</summary><pre id="cd-json"></pre></details>
+    <div id="cd-stages" style="margin-top:.8rem"></div>
+    <div class="stepper">
+      <button id="cd-prev">◀ Back</button>
+      <div class="dots" id="cd-dots"></div>
+      <button id="cd-next" class="primary">Encode ▶</button>
+    </div>
+  </section>
+
+  <!-- 5. Access pattern -->
+  <section id="access">
+    <h2><span class="num">5</span>Chunk shape vs. how you read the data</h2>
+    <p>A Zarr reader always fetches <em>whole chunks</em>. Here's a 48 × 48 array of (time × location). The writer chose a chunk shape once, and every reader pays for it. Pick a query and tap the grid to move it. <span style="color:var(--accent)">■</span> elements you want, <span style="background:var(--accent-soft);padding:0 .3em">shaded</span> chunks you have to download.</p>
+    <div class="row">
+      <span class="small muted">chunking:</span>
+      <button data-c="1,48">map-friendly 1×48</button>
+      <button data-c="48,1">series-friendly 48×1</button>
+      <button data-c="8,8" class="on">balanced 8×8</button>
+      <button data-c="2,2">tiny 2×2</button>
+      <button data-c="48,48">one chunk</button>
+    </div>
+    <div class="row">
+      <label class="ctl">chunk rows <select id="ac-cr"></select></label>
+      <label class="ctl">chunk cols <select id="ac-cc"></select></label>
+    </div>
+    <div class="row">
+      <span class="small muted">query:</span>
+      <button data-q="row" class="on">map at one time</button>
+      <button data-q="col">time series at one place</button>
+      <button data-q="box">8 × 8 box</button>
+    </div>
+    <div class="two">
+      <div>
+        <div class="axis">location →</div>
+        <canvas id="ac-canvas"></canvas>
+        <div class="axis">↑ time runs down the rows</div>
+      </div>
+      <div>
+        <table class="cost" id="ac-table"></table>
+        <p class="small" id="ac-verdict"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Sharding -->
+  <section id="shard">
+    <h2><span class="num">6</span>Sharding: many chunks in one object</h2>
+    <p>Lots of tiny chunks means lots of tiny objects, which is slow and expensive on cloud storage. The <code>sharding_indexed</code> codec packs a grid of <em>inner chunks</em> into one stored object (a <em>shard</em>), with an index of <code>(offset, nbytes)</code> pairs at the end. This array is 8 × 8 uint8, with shards of 4 × 8 and inner chunks of 2 × 4. <b>Tap inner chunks</b> to write or erase them, and watch the shard's bytes change.</p>
+    <div class="two">
+      <div>
+        <div class="shards" id="sh-grid"></div>
+        <ul class="keys" id="sh-keys" style="margin-top:.7rem"></ul>
+      </div>
+      <div>
+        <div class="small muted" id="sh-title"></div>
+        <div class="bar" id="sh-bar"></div>
+        <div class="small muted" id="sh-barlbl"></div>
+        <table class="cost" id="sh-index"></table>
+      </div>
+    </div>
+    <div class="small muted" style="margin-top:.4rem">Shard bytes (hex):</div>
+    <div class="hex" id="sh-hex"></div>
+    <h3 style="font-size:1rem;margin:1.1rem 0 .2rem">Reading one inner chunk with two range requests</h3>
+    <div class="row" id="sh-pick"></div>
+    <div class="reqlog" id="sh-log"></div>
+    <div class="row"><button id="sh-step" class="primary">Step ▶</button><button id="sh-reset">Reset</button></div>
+  </section>
+
+  <!-- 7. v2 vs v3 -->
+  <section id="versions">
+    <h2><span class="num">7</span>v2 vs v3 at a glance</h2>
+    <table class="cmp">
+      <tr><th></th><th>Zarr v2</th><th>Zarr v3</th></tr>
+      <tr><td>Metadata</td><td><code>.zarray</code>, <code>.zgroup</code>, <code>.zattrs</code></td><td>one <code>zarr.json</code> per node, attributes inline</td></tr>
+      <tr><td>Chunk key</td><td><code>0.0</code> (or <code>0/0</code>)</td><td><code>c/0/0</code> (or <code>c.0.0</code>)</td></tr>
+      <tr><td>dtype</td><td>NumPy typestr like <code>&lt;i2</code>, byte order built in</td><td><code>int16</code>; byte order is a <code>bytes</code> codec setting</td></tr>
+      <tr><td>Encoding</td><td><code>filters</code> + one <code>compressor</code>, plus <code>order</code> C/F</td><td>a general <code>codecs</code> chain (with <code>transpose</code> instead of <code>order</code>)</td></tr>
+      <tr><td>Sharding</td><td>no</td><td><code>sharding_indexed</code> codec</td></tr>
+      <tr><td>Extensions</td><td>ad hoc</td><td>named extension points, with <code>must_understand</code></td></tr>
+    </table>
+    <p class="small" style="margin-top:.8rem">Specs: <a href="https://zarr-specs.readthedocs.io/en/latest/v3/core/index.html">v3 core</a> · <a href="https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/index.html">sharding codec</a> · <a href="https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html">v2</a>. The shard bytes in section 6, with only the top-left inner chunk written, match a file written by zarr-python 3.4.1, byte for byte.</p>
+  </section>
+
+  <footer>Made with Claude, 2026-10-23 · <a href="../../index.html">All pages</a></footer>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const hue = k => (k * 137.508 + 25) % 360;
+const chunkBg = k => `hsl(${hue(k).toFixed(1)} var(--chunkS) var(--chunkL))`;
+const h2 = b => b.toString(16).padStart(2, '0');
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+function radio(sel, onPick) {
+  const btns = $$(sel);
+  btns.forEach(b => b.addEventListener('click', () => { btns.forEach(x => x.classList.toggle('on', x === b)); onPick(b); }));
+}
+
+// CRC32C (Castagnoli), as used by the zarr crc32c codec; checksum appended little-endian
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0x82F63B78 : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32c(u8) { let c = 0xFFFFFFFF; for (const b of u8) c = CRC_T[(c ^ b) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+const le32 = v => new Uint8Array([v & 255, (v >>> 8) & 255, (v >>> 16) & 255, v >>> 24]);
+function concat(...parts) { const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0; for (const p of parts) { out.set(p, o); o += p.length; } return out; }
+
+function renderHex(host, u8, deco) {
+  host.innerHTML = '';
+  u8.forEach((b, i) => { const s = document.createElement('span'); s.textContent = h2(b); if (deco) deco(s, i); host.append(s); });
+}
+
+function dots(host, n, cur) {
+  host.innerHTML = '';
+  for (let i = 0; i < n; i++) { const d = document.createElement('span'); if (i <= cur) d.className = 'on'; host.append(d); }
+}
+
+// Build a grid of chunks, each an inner grid of cells
+function chunkGrid(host, { R, C, cr, cc, cell, chunk, maxCell = 30 }) {
+  const nR = Math.ceil(R / cr), nC = Math.ceil(C / cc);
+  host.innerHTML = '';
+  host.className = 'cgrid';
+  host.style.gridTemplateColumns = `repeat(${nC}, minmax(0, 1fr))`;
+  host.style.maxWidth = `${nC * cc * maxCell}px`;
+  for (let ci = 0; ci < nR; ci++) for (let cj = 0; cj < nC; cj++) {
+    const k = ci * nC + cj;
+    const d = document.createElement('div');
+    d.className = 'chunk';
+    d.style.gridTemplateColumns = `repeat(${cc}, minmax(0, 1fr))`;
+    if (chunk) chunk(d, ci, cj, k);
+    for (let a = 0; a < cr; a++) for (let b = 0; b < cc; b++) {
+      const i = ci * cr + a, j = cj * cc + b;
+      const c = document.createElement('div');
+      c.className = 'cell';
+      c.dataset.i = i; c.dataset.j = j;
+      if (i >= R || j >= C) c.classList.add('pad'); else c.style.background = chunkBg(k);
+      if (cell) cell(c, i, j, k);
+      d.append(c);
+    }
+    host.append(d);
+  }
+  return { nR, nC };
+}
+
+/* ---------- 1. Overview ---------- */
+(function overview() {
+  const svg = $('#ov-svg'), NS = 'http://www.w3.org/2000/svg';
+  const C = 8, cr = 2, cc = 4, CS = 20;
+  const mk = (t, a = {}, p = svg) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); p.append(e); return e; };
+
+  const defs = mk('defs');
+  const m = mk('marker', { id: 'ov-ah', viewBox: '0 0 10 10', refX: 8, refY: 5, markerWidth: 6, markerHeight: 6, orient: 'auto-start-reverse' }, defs);
+  mk('path', { d: 'M0 0L10 5L0 10z', style: 'fill:var(--accent)' }, m);
+
+  // ghost of the logical array (steps 3–4)
+  const ghost = mk('g', { class: 'ov-ghost' });
+  mk('text', { x: 20, y: 44, class: 'ov-label' }, ghost).textContent = 'logical array a (6 × 8)';
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 8; j++) mk('rect', { x: 20 + j * CS, y: 50 + i * CS, width: CS, height: CS, class: 'ov-ghostcell' }, ghost);
+
+  const read = mk('g', { class: 'ov-read' });
+  mk('rect', { x: 20 + 4 * CS, y: 50 + 2 * CS, width: 4 * CS, height: 2 * CS, class: 'ov-hlchunk' }, read);
+  mk('rect', { x: 20 + 5 * CS + 2, y: 50 + 3 * CS + 2, width: CS - 4, height: CS - 4, class: 'ov-hlcell', rx: 2 }, read);
+  mk('text', { x: 20 + 5 * CS + CS / 2, y: 50 + 3 * CS - 4, class: 'ov-key', 'text-anchor': 'middle' }, read).textContent = 'a[3,5]';
+  mk('path', { d: 'M132 122 C 165 150, 175 158, 204 159', class: 'ov-arrow', 'marker-end': 'url(#ov-ah)' }, read);
+
+  // store box
+  const store = mk('g', { class: 'ov-storeg' });
+  mk('rect', { x: 196, y: 24, width: 158, height: 206, rx: 8, class: 'ov-storebox' }, store);
+  mk('text', { x: 204, y: 39, class: 'ov-label' }, store).textContent = 'store: key → bytes';
+  const meta = mk('g', { class: 'ov-meta' }, store);
+  mk('rect', { x: 205, y: 46, width: 140, height: 20, rx: 4, class: 'ov-metabox' }, meta);
+  mk('text', { x: 212, y: 59.5, class: 'ov-key' }, meta).textContent = 'arr/zarr.json';
+  mk('text', { x: 339, y: 59.5, class: 'ov-key ov-dim', 'text-anchor': 'end' }, meta).textContent = 'JSON';
+  const keyTexts = [];
+
+  const chunks = [];
+  for (let ci = 0; ci < 3; ci++) for (let cj = 0; cj < 2; cj++) {
+    const k = ci * 2 + cj;
+    const g = mk('g', { class: 'ov-chunk' });
+    g.style.transitionDelay = `${k * 55}ms`;
+    for (let a = 0; a < cr; a++) for (let b = 0; b < cc; b++) {
+      const i = ci * cr + a, j = cj * cc + b;
+      mk('rect', { x: b * CS, y: a * CS, width: CS, height: CS, class: 'ov-cell', style: `fill:${chunkBg(k)}` }, g);
+      mk('text', { x: b * CS + CS / 2, y: a * CS + CS / 2 + 3, class: 'ov-num', 'text-anchor': 'middle' }, g).textContent = i * C + j;
+    }
+    mk('text', { x: 0, y: -3, class: 'ov-ctag' }, g).textContent = `chunk (${ci},${cj})`;
+    const y = 74 + k * 25;
+    const kt = mk('text', { x: 252, y: y + 12.5, class: 'ov-key ov-keytxt' }, store); kt.textContent = `arr/c/${ci}/${cj}`;
+    mk('text', { x: 345, y: y + 12.5, class: 'ov-key ov-dim', 'text-anchor': 'end' }, store).textContent = '16 B';
+    keyTexts.push(kt);
+    chunks.push({ g, ci, cj, k });
+  }
+
+  const pos = (c, s) => s === 0 ? [20 + c.cj * 80, 50 + c.ci * 40, 1]
+    : s === 1 ? [14 + c.cj * 92, 44 + c.ci * 58, 1]
+    : [208, 74 + c.k * 25, .45];
+
+  const caps = [
+    'A Zarr array starts out as an ordinary N-dimensional array. Here it\'s a 6 × 8 array of int16.',
+    'The writer picks a <b>chunk shape</b> when creating the array, here 2 × 4. The array is cut into a regular grid of chunks, 3 × 2 of them. Each chunk is identified by its position in that grid.',
+    'Each chunk is encoded <em>on its own</em> (2 × 4 × 2 bytes = 16 B before compression) and stored as one value, under a key built from its grid position. Next to the chunks sits <code>zarr.json</code>, which holds shape, dtype, chunk shape, codecs and fill value.',
+    'To read <code>a[3, 5]</code>: ① fetch <code>zarr.json</code>. ② Work out the chunk: (3 ÷ 2, 5 ÷ 4), rounding down, = (1, 1). ③ Fetch key <code>arr/c/1/1</code> and decode it. ④ Take element (3 mod 2, 5 mod 4) = (1, 1) inside the chunk. Only one chunk is fetched. The other five are never touched.'
+  ];
+  let step = 0;
+  function show() {
+    svg.setAttribute('data-step', step);
+    chunks.forEach(c => { const [x, y, s] = pos(c, step); c.g.style.transform = `translate(${x}px, ${y}px) scale(${s})`; c.g.classList.toggle('hl', step === 3 && c.k === 3); });
+    keyTexts.forEach((t, k) => t.classList.toggle('hl', step === 3 && k === 3));
+    meta.classList.toggle('hl', step === 3);
+    $('#ov-cap').innerHTML = caps[step];
+    $('#ov-prev').disabled = step === 0;
+    $('#ov-next').textContent = step === caps.length - 1 ? '↺ Restart' : 'Next ▶';
+    dots($('#ov-dots'), caps.length, step);
+  }
+  $('#ov-next').onclick = () => { step = (step + 1) % caps.length; show(); };
+  $('#ov-prev').onclick = () => { if (step) step--; show(); };
+  show();
+})();
+
+/* ---------- 2. Explorer ---------- */
+(function explorer() {
+  const st = { R: 7, C: 10, cr: 3, cc: 4, dt: 'int16', si: 4, sj: 6 };
+  const size = { int8: 1, int16: 2, float32: 4, float64: 8 };
+  const ids = ['R', 'C', 'cr', 'cc'];
+  ids.forEach(id => { const inp = $('#ex-' + id); inp.addEventListener('input', () => { st[id] = +inp.value; render(); }); });
+  $('#ex-dt').addEventListener('change', e => { st.dt = e.target.value; render(); });
+  $('#ex-grid').addEventListener('click', e => { const c = e.target.closest('.cell'); if (!c) return; st.si = +c.dataset.i; st.sj = +c.dataset.j; render(); });
+
+  function render() {
+    ids.forEach(id => $('#ex-' + id + 'o').textContent = st[id]);
+    const { R, C, cr, cc } = st, isz = size[st.dt];
+    const nR = Math.ceil(R / cr), nC = Math.ceil(C / cc);
+    st.si = Math.min(st.si, nR * cr - 1); st.sj = Math.min(st.sj, nC * cc - 1);
+    const { si, sj } = st;
+    const ci = Math.floor(si / cr), cj = Math.floor(sj / cc), li = si % cr, lj = sj % cc;
+    const kSel = ci * nC + cj;
+    chunkGrid($('#ex-grid'), { R, C, cr, cc,
+      chunk: (d, a, b) => { if (a === ci && b === cj) d.classList.add('sel'); },
+      cell: (c, i, j) => { if (i === si && j === sj) c.classList.add('cur'); } });
+    const stored = nR * cr * nC * cc, pad = stored - R * C;
+    $('#ex-summary').innerHTML = `Array ${R} × ${C} ÷ chunks ${cr} × ${cc} → chunk grid <b>${nR} × ${nC} = ${nR * nC} chunks</b>, each ${cr * cc} elements = ${cr * cc * isz} B raw. ` +
+      (pad ? `Edge padding: ${pad} element${pad > 1 ? 's' : ''} stored but outside the array.` : 'The chunks divide the array exactly, so there\'s no padding.');
+    const outside = si >= R || sj >= C;
+    const off = (li * cc + lj) * isz;
+    $('#ex-info').innerHTML = `
+      <dt>element</dt><dd>a[${si}, ${sj}]${outside ? ' <span class="muted">(padding, outside the array)</span>' : ''}</dd>
+      <dt>chunk index</dt><dd>(${si} // ${cr}, ${sj} // ${cc}) = (${ci}, ${cj})</dd>
+      <dt>v3 key</dt><dd>arr/c/${ci}/${cj}</dd>
+      <dt>v2 key</dt><dd>arr/${ci}.${cj}</dd>
+      <dt>inside chunk</dt><dd>(${si} % ${cr}, ${sj} % ${cc}) = (${li}, ${lj})</dd>
+      <dt>byte offset</dt><dd>(${li} × ${cc} + ${lj}) × ${isz} B = ${off}  <span class="muted">of ${cr * cc * isz} B, before compression</span></dd>`;
+    $('#ex-striplbl').textContent = `Chunk (${ci}, ${cj}) as stored: elements in C order (row by row), ${isz} byte${isz > 1 ? 's' : ''} each`;
+    const strip = $('#ex-strip'); strip.innerHTML = '';
+    for (let a = 0; a < cr; a++) for (let b = 0; b < cc; b++) {
+      const s = document.createElement('span');
+      s.style.width = `${0.55 + isz * 0.28}rem`;
+      const gi = ci * cr + a, gj = cj * cc + b;
+      if (gi >= R || gj >= C) s.className = 'cell pad'; else s.style.background = chunkBg(kSel);
+      if (a === li && b === lj) s.classList.add('cur');
+      s.title = `(${a},${b})`;
+      strip.append(s);
+    }
+  }
+  render();
+})();
+
+/* ---------- 3. Store ---------- */
+(function store() {
+  const R = 8, cr = 3, cc = 4, FILL = 0;
+  let C = 12, mode = 'write', fmt = 'v3', painting = false, prevKeys = new Set();
+  const data = Array.from({ length: R }, () => new Array(16).fill(FILL));
+  const grid = $('#st-grid');
+  let cells = [], chunkEls = [];
+
+  function build() {
+    cells = []; chunkEls = [];
+    chunkGrid(grid, { R, C, cr, cc, maxCell: 28,
+      chunk: (d, ci, cj) => { d.dataset.ci = ci; d.dataset.cj = cj; chunkEls.push(d); },
+      cell: (c, i, j) => { if (i < R && j < C) cells.push(c); } });
+    update();
+  }
+  const present = (ci, cj) => { for (let i = ci * cr; i < Math.min(R, ci * cr + cr); i++) for (let j = cj * cc; j < Math.min(C, cj * cc + cc); j++) if (data[i][j] !== FILL) return true; return false; };
+
+  function meta() {
+    return fmt === 'v3'
+      ? { zarr_format: 3, node_type: 'array', shape: [R, C], data_type: 'int16',
+          chunk_grid: { name: 'regular', configuration: { chunk_shape: [cr, cc] } },
+          chunk_key_encoding: { name: 'default', configuration: { separator: '/' } },
+          fill_value: FILL, codecs: [{ name: 'bytes', configuration: { endian: 'little' } }],
+          attributes: {}, dimension_names: ['y', 'x'] }
+      : { zarr_format: 2, shape: [R, C], chunks: [cr, cc], dtype: '<i2', compressor: null,
+          filters: null, fill_value: FILL, order: 'C', dimension_separator: '.' };
+  }
+
+  function update() {
+    cells.forEach(c => { const v = data[c.dataset.i][c.dataset.j]; c.textContent = v === FILL ? '' : v; });
+    const nC = Math.ceil(C / cc), nR = Math.ceil(R / cr);
+    const keys = [];
+    const mjson = JSON.stringify(meta(), null, 2);
+    if (fmt === 'v3') {
+      keys.push(['zarr.json', JSON.stringify({ zarr_format: 3, node_type: 'group', attributes: {} }).length, 1]);
+      keys.push(['temp/zarr.json', mjson.length, 1]);
+    } else {
+      keys.push(['.zgroup', JSON.stringify({ zarr_format: 2 }).length, 1]);
+      keys.push(['temp/.zarray', mjson.length, 1]);
+    }
+    let n = 0;
+    chunkEls.forEach(d => {
+      const ci = +d.dataset.ci, cj = +d.dataset.cj, p = present(ci, cj);
+      d.classList.toggle('absent', !p);
+      if (p) { n++; keys.push([fmt === 'v3' ? `temp/c/${ci}/${cj}` : `temp/${ci}.${cj}`, cr * cc * 2, 0]); }
+    });
+    const ul = $('#st-keys'); ul.innerHTML = '';
+    const now = new Set();
+    keys.forEach(([k, sz, isMeta]) => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span>${k}</span><span class="sz">${sz} B</span>`;
+      if (isMeta) li.className = 'meta';
+      if (!isMeta && !prevKeys.has(k)) li.classList.add('new');
+      now.add(k); ul.append(li);
+    });
+    prevKeys = now;
+    $('#st-count').textContent = `(${n} of ${nR * nC} chunks stored)`;
+    $('#st-shape').textContent = `shape ${R} × ${C}, chunks ${cr} × ${cc}, int16, fill_value 0. Each stored chunk is ${cr * cc} × 2 B = ${cr * cc * 2} B, uncompressed.`;
+    $('#st-meta').textContent = mjson;
+    $('#st-metasum').textContent = `Show the array metadata (${fmt === 'v3' ? 'temp/zarr.json' : 'temp/.zarray'})`;
+  }
+
+  function paintAt(e) {
+    const t = document.elementFromPoint(e.clientX, e.clientY);
+    const c = t && t.closest && t.closest('#st-grid .cell');
+    if (!c || c.classList.contains('pad')) return;
+    const i = +c.dataset.i, j = +c.dataset.j;
+    const v = mode === 'write' ? ((i * 3 + j) % 9) + 1 : FILL;
+    if (data[i][j] !== v) { data[i][j] = v; update(); }
+  }
+  grid.addEventListener('pointerdown', e => { painting = true; paintAt(e); e.preventDefault(); });
+  window.addEventListener('pointermove', e => { if (painting) paintAt(e); });
+  window.addEventListener('pointerup', () => painting = false);
+  window.addEventListener('pointercancel', () => painting = false);
+
+  radio('#st-write, #st-erase', b => mode = b.id === 'st-write' ? 'write' : 'erase');
+  $('#st-row').onclick = () => { for (let j = 0; j < C; j++) data[0][j] = (j % 9) + 1; update(); };
+  $('#st-all').onclick = () => { for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) data[i][j] = ((i * 3 + j) % 9) + 1; update(); };
+  $('#st-clear').onclick = () => { data.forEach(r => r.fill(FILL)); update(); };
+  $('#st-grow').onclick = e => {
+    if (C === 12) { C = 16; e.target.textContent = 'Shrink to 8 × 12'; }
+    else { C = 12; data.forEach(r => r.fill(FILL, 12)); e.target.textContent = 'Grow to 8 × 16'; }
+    build();
+  };
+  $('#st-fmt').addEventListener('change', e => { fmt = e.target.value; update(); });
+  for (let j = 0; j < 7; j++) data[1][j] = (j % 9) + 1;
+  build();
+})();
+
+/* ---------- 4. Codecs ---------- */
+(function codecs() {
+  const H = 4, W = 8;
+  const cfg = { tr: false, end: 'little', gz: true, crc: true };
+  let preset = 'ramp', vals = [], step = 0, stages = [], token = 0;
+  const hasGz = 'CompressionStream' in window;
+
+  function makeVals() {
+    vals = Array.from({ length: H * W }, (_, k) => preset === 'ramp' ? k : preset === 'same' ? 1000 : Math.floor(Math.random() * 65536));
+  }
+  async function gzip(u8) {
+    const s = new Blob([u8]).stream().pipeThrough(new CompressionStream('gzip'));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+  async function compute() {
+    const my = ++token;
+    const out = [];
+    let arr = { h: H, w: W, v: vals.slice(), row: vals.map((_, k) => Math.floor(k / W)) };
+    out.push({ title: 'chunk array', t: `${H} × ${W} uint16`, kind: 'array', arr, note: 'One chunk, as your code sees it.' });
+    if (cfg.tr) {
+      const t = { h: arr.w, w: arr.h, v: [], row: [] };
+      for (let i = 0; i < t.h; i++) for (let j = 0; j < t.w; j++) { t.v.push(arr.v[j * arr.w + i]); t.row.push(arr.row[j * arr.w + i]); }
+      arr = t;
+      out.push({ title: 'transpose', t: 'array → array', kind: 'array', arr, note: `order [1, 0]: the chunk is now ${arr.h} × ${arr.w}. Same values, different memory order. (This replaces v2's order: "F".)` });
+    }
+    const raw = new Uint8Array(arr.v.length * 2), dv = new DataView(raw.buffer), org = [];
+    arr.v.forEach((v, k) => { dv.setUint16(k * 2, v, cfg.end === 'little'); org.push(arr.row[k], arr.row[k]); });
+    out.push({ title: 'bytes', t: 'array → bytes', kind: 'bytes', bytes: raw, org, note: `Each value becomes 2 bytes, ${cfg.end}-endian, written row by row (C order): ${raw.length} B. This is the one required codec.` });
+    let cur = raw;
+    if (cfg.gz) {
+      if (hasGz) {
+        const z = await gzip(cur);
+        if (my !== token) return;
+        out.push({ title: 'gzip', t: 'bytes → bytes', kind: 'bytes', bytes: z, note: `${cur.length} B → ${z.length} B. ${z.length > cur.length ? 'Bigger! gzip adds about 18 B of header, and tiny or random chunks don\'t compress. That\'s one reason real chunks are MB-sized.' : 'Repetitive data compresses well.'} (Compressed with your browser's built-in gzip.)` });
+        cur = z;
+      } else out.push({ title: 'gzip', t: 'bytes → bytes', kind: 'none', note: 'Your browser lacks CompressionStream, so this step is skipped here.' });
+    }
+    if (cfg.crc) {
+      const c = crc32c(cur), withC = concat(cur, le32(c));
+      out.push({ title: 'crc32c', t: 'bytes → bytes', kind: 'bytes', bytes: withC, tail: 4, note: `Appends a 4-byte CRC32C checksum (0x${c.toString(16).padStart(8, '0')}, little-endian) so corruption is detected on read.` });
+      cur = withC;
+    }
+    out[out.length - 1].final = true;
+    stages = out;
+    step = Math.min(step, stages.length - 1);
+    const codecList = [];
+    if (cfg.tr) codecList.push({ name: 'transpose', configuration: { order: [1, 0] } });
+    codecList.push({ name: 'bytes', configuration: { endian: cfg.end } });
+    if (cfg.gz) codecList.push({ name: 'gzip', configuration: { level: 5 } });
+    if (cfg.crc) codecList.push({ name: 'crc32c' });
+    $('#cd-json').textContent = '"codecs": ' + JSON.stringify(codecList, null, 2);
+    render();
+  }
+  function render() {
+    const host = $('#cd-stages'); host.innerHTML = '';
+    stages.slice(0, step + 1).forEach((s, idx) => {
+      if (idx) { const a = document.createElement('div'); a.className = 'arrow'; a.textContent = '↓ encode'; host.append(a); }
+      const d = document.createElement('div'); d.className = 'stage';
+      d.innerHTML = `<h3><span>${s.title}</span><span class="t">${s.t}</span></h3><p class="note">${s.note}${s.final ? ' <b>These are the exact bytes stored under the chunk\'s key.</b>' : ''}</p>`;
+      if (s.kind === 'array') {
+        const t = document.createElement('div'); t.className = 'atable'; t.style.gridTemplateColumns = `repeat(${s.arr.w}, auto)`;
+        s.arr.v.forEach((v, k) => { const c = document.createElement('span'); c.textContent = v; c.style.background = chunkBg(s.arr.row[k] * 2); t.append(c); });
+        d.append(t);
+      } else if (s.kind === 'bytes') {
+        const hx = document.createElement('div'); hx.className = 'hex';
+        renderHex(hx, s.bytes, (sp, i) => {
+          if (s.org) sp.style.background = chunkBg(s.org[i] * 2);
+          if (s.tail && i >= s.bytes.length - s.tail) sp.className = 'crc';
+        });
+        d.append(hx);
+        const len = document.createElement('div'); len.className = 'small muted'; len.textContent = `${s.bytes.length} bytes`; d.append(len);
+      }
+      host.append(d);
+    });
+    dots($('#cd-dots'), stages.length, step);
+    $('#cd-prev').disabled = step === 0;
+    $('#cd-next').textContent = step >= stages.length - 1 ? '↺ Start over' : 'Encode ▶';
+  }
+  $('#cd-next').onclick = () => { step = step >= stages.length - 1 ? 0 : step + 1; render(); };
+  $('#cd-prev').onclick = () => { if (step) step--; render(); };
+  $('#cd-tr').onchange = e => { cfg.tr = e.target.checked; compute(); };
+  $('#cd-end').onchange = e => { cfg.end = e.target.value; compute(); };
+  $('#cd-gz').onchange = e => { cfg.gz = e.target.checked; compute(); };
+  $('#cd-crc').onchange = e => { cfg.crc = e.target.checked; compute(); };
+  radio('#codecs [data-p]', b => { preset = b.dataset.p; makeVals(); compute(); });
+  makeVals(); compute();
+})();
+
+/* ---------- 5. Access pattern ---------- */
+(function access() {
+  const N = 48, divs = [1, 2, 3, 4, 6, 8, 12, 16, 24, 48];
+  let cr = 8, cc = 8, q = 'row', qi = 20, qj = 30;
+  const cv = $('#ac-canvas'), ctx = cv.getContext('2d');
+  const selR = $('#ac-cr'), selC = $('#ac-cc');
+  divs.forEach(d => { selR.add(new Option(d, d)); selC.add(new Option(d, d)); });
+
+  const box = () => { const i0 = Math.max(0, Math.min(N - 8, qi - 4)), j0 = Math.max(0, Math.min(N - 8, qj - 4)); return [i0, j0]; };
+  function wanted(kind) {
+    const out = [];
+    if (kind === 'row') for (let j = 0; j < N; j++) out.push([qi, j]);
+    else if (kind === 'col') for (let i = 0; i < N; i++) out.push([i, qj]);
+    else { const [i0, j0] = box(); for (let i = i0; i < i0 + 8; i++) for (let j = j0; j < j0 + 8; j++) out.push([i, j]); }
+    return out;
+  }
+  function cost(kind) {
+    const w = wanted(kind), ch = new Set(w.map(([i, j]) => `${Math.floor(i / cr)},${Math.floor(j / cc)}`));
+    return { w, ch, req: ch.size, read: ch.size * cr * cc, want: w.length };
+  }
+  const fmtB = n => n >= 1024 ? `${(n / 1024).toFixed(n >= 10240 ? 0 : 1)} KB` : `${n} B`;
+
+  function draw() {
+    const W = cv.clientWidth || 360, dpr = window.devicePixelRatio || 1;
+    cv.width = W * dpr; cv.height = W * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const s = W / N, c = cost(q);
+    const t1 = css('--tone1'), t2 = css('--tone2'), acc = css('--accent'), soft = css('--accent-soft');
+    for (let ci = 0; ci < N / cr; ci++) for (let cj = 0; cj < N / cc; cj++) {
+      ctx.fillStyle = (ci + cj) % 2 ? t2 : t1;
+      ctx.fillRect(cj * cc * s, ci * cr * s, cc * s, cr * s);
+      if (c.ch.has(`${ci},${cj}`)) { ctx.fillStyle = soft; ctx.fillRect(cj * cc * s, ci * cr * s, cc * s, cr * s);}
+    }
+    ctx.fillStyle = acc;
+    c.w.forEach(([i, j]) => ctx.fillRect(j * s + .5, i * s + .5, s - 1, s - 1));
+  }
+  function table() {
+    const rows = [['row', 'Map, one time'], ['col', 'Series, one place'], ['box', '8 × 8 box']];
+    let h = `<tr><th>query</th><th>requests</th><th>data read</th><th>× needed</th></tr>`;
+    const res = {};
+    rows.forEach(([k, name]) => {
+      const c = cost(k); res[k] = c;
+      h += `<tr class="${k === q ? 'on' : ''}"><td>${name}</td><td>${c.req}</td><td>${fmtB(c.read * 4)}</td><td>${(c.read / c.want).toFixed(1)}×</td></tr>`;
+    });
+    $('#ac-table').innerHTML = h;
+    const nObj = (N / cr) * (N / cc);
+    const ar = res.row.read / res.row.want, ac = res.col.read / res.col.want;
+    let v = `${nObj} chunk object${nObj > 1 ? 's' : ''} in the store, ${cr * cc} elements (${fmtB(cr * cc * 4)} of float32) each. `;
+    if (cr === N && cc === N) v += 'With a single chunk, every query downloads the whole array.';
+    else if (ar <= 1.01 && ac > 10) v += 'Perfect for maps, but terrible for time series: each series touches every chunk.';
+    else if (ac <= 1.01 && ar > 10) v += 'Perfect for time series, but terrible for maps.';
+    else if (cr * cc <= 4) v += 'Hardly any wasted bytes, but a huge number of requests and objects. Per-request latency dominates on cloud storage.';
+    else v += 'A compromise: neither query is ideal, and neither is a disaster.';
+    $('#ac-verdict').textContent = v + ' Real chunks are usually 1–100 MB, so these costs scale up a lot.';
+  }
+  function update() { selR.value = cr; selC.value = cc; draw(); table(); }
+
+  radio('#access [data-c]', b => { [cr, cc] = b.dataset.c.split(',').map(Number); update(); });
+  radio('#access [data-q]', b => { q = b.dataset.q; update(); });
+  selR.onchange = () => { cr = +selR.value; $$('#access [data-c]').forEach(b => b.classList.remove('on')); update(); };
+  selC.onchange = () => { cc = +selC.value; $$('#access [data-c]').forEach(b => b.classList.remove('on')); update(); };
+  cv.addEventListener('click', e => { const r = cv.getBoundingClientRect(); qj = Math.min(N - 1, Math.floor((e.clientX - r.left) / r.width * N)); qi = Math.min(N - 1, Math.floor((e.clientY - r.top) / r.height * N)); update(); });
+  window.addEventListener('resize', draw);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
+  update();
+})();
+
+/* ---------- 6. Sharding ---------- */
+(function shard() {
+  const IR = 2, IC = 4, PER = 4, NSH = 2, CHB = IR * IC; // 2 shards (4×8), each 2×2 inner chunks (2×4)
+  const EMPTY = 0xFFFFFFFFFFFFFFFFn;
+  const written = new Set(['0:0']);
+  let sel = 0, readK = 0, readStep = 0;
+  const val = (s, k) => 7 + s * PER + k;
+  const ik = k => `(${Math.floor(k / 2)},${k % 2})`;
+
+  function shardBytes(s) {
+    const ks = [0, 1, 2, 3].filter(k => written.has(`${s}:${k}`));
+    if (!ks.length) return null;
+    const parts = [], region = [], ent = {};
+    let off = 0;
+    ks.forEach(k => { parts.push(new Uint8Array(CHB).fill(val(s, k))); for (let b = 0; b < CHB; b++) region.push({ t: 'data', k }); ent[k] = [off, CHB]; off += CHB; });
+    const idx = new Uint8Array(PER * 16), dv = new DataView(idx.buffer);
+    for (let k = 0; k < PER; k++) {
+      const e = ent[k];
+      dv.setBigUint64(k * 16, e ? BigInt(e[0]) : EMPTY, true);
+      dv.setBigUint64(k * 16 + 8, e ? BigInt(e[1]) : EMPTY, true);
+      for (let b = 0; b < 16; b++) region.push({ t: 'idx', k });
+    }
+    const c = crc32c(idx);
+    for (let b = 0; b < 4; b++) region.push({ t: 'crc' });
+    return { bytes: concat(...parts, idx, le32(c)), region, ent, crc: c, dataLen: off };
+  }
+
+  function render() {
+    // grid
+    const g = $('#sh-grid'); g.innerHTML = '';
+    for (let s = 0; s < NSH; s++) {
+      const sd = document.createElement('div'); sd.className = 'shard' + (s === sel ? ' sel' : '');
+      const sb = shardBytes(s);
+      sd.innerHTML = `<div class="lbl">shard c/${s}/0 · ${sb ? sb.bytes.length + ' B' : 'not stored'}</div>`;
+      const inn = document.createElement('div'); inn.className = 'inners';
+      for (let k = 0; k < PER; k++) {
+        const w = written.has(`${s}:${k}`);
+        const d = document.createElement('div'); d.className = 'inner' + (w ? '' : ' empty');
+        if (s === sel && k === readK && readStep) d.style.outline = '2.5px solid var(--accent)';
+        for (let b = 0; b < CHB; b++) { const c = document.createElement('div'); c.className = 'cell'; c.style.background = chunkBg(s * PER + k); c.textContent = w ? h2(val(s, k)) : ''; d.append(c); }
+        d.addEventListener('click', ev => { ev.stopPropagation(); const key = `${s}:${k}`; written.has(key) ? written.delete(key) : written.add(key); sel = s; readStep = 0; render(); });
+        inn.append(d);
+      }
+      sd.append(inn);
+      sd.addEventListener('click', () => { sel = s; readStep = 0; render(); });
+      g.append(sd);
+    }
+    // keys
+    const keys = $('#sh-keys'); keys.innerHTML = '<li class="meta"><span>sharded/zarr.json</span><span class="sz">metadata</span></li>';
+    for (let s = 0; s < NSH; s++) { const sb = shardBytes(s); if (sb) keys.innerHTML += `<li><span>sharded/c/${s}/0</span><span class="sz">${sb.bytes.length} B</span></li>`; }
+
+    const sb = shardBytes(sel);
+    $('#sh-title').innerHTML = `Inside shard <code>c/${sel}/0</code>`;
+    const bar = $('#sh-bar'), tbl = $('#sh-index'), hex = $('#sh-hex');
+    if (!sb) {
+      bar.innerHTML = '<div style="flex:1;color:var(--muted)">no object: the whole shard is fill_value</div>';
+      $('#sh-barlbl').textContent = 'A shard whose inner chunks are all empty is never written.';
+      tbl.innerHTML = ''; hex.innerHTML = '<span class="muted" style="grid-column:1/-1">—</span>';
+    } else {
+      bar.innerHTML = '';
+      Object.keys(sb.ent).forEach(k => { const d = document.createElement('div'); d.style.flex = CHB; d.style.background = chunkBg(sel * PER + +k); d.textContent = ik(+k); bar.append(d); });
+      const ix = document.createElement('div'); ix.style.flex = PER * 16; ix.style.background = 'var(--code)'; ix.textContent = `index ${PER}×16 B`; bar.append(ix);
+      const cr = document.createElement('div'); cr.style.flex = 4; cr.style.background = 'var(--accent-soft)'; cr.textContent = 'crc'; bar.append(cr);
+      $('#sh-barlbl').textContent = `${sb.dataLen} B of chunk data + ${PER * 16} B index + 4 B CRC32C = ${sb.bytes.length} B. Index location: end.`;
+      let h = '<tr><th>inner chunk</th><th>offset</th><th>nbytes</th></tr>';
+      for (let k = 0; k < PER; k++) { const e = sb.ent[k]; h += `<tr class="${readStep >= 2 && k === readK ? 'on' : ''}"><td>${ik(k)}</td>${e ? `<td>${e[0]}</td><td>${e[1]}</td>` : '<td colspan="2" class="muted">2⁶⁴−1 (empty)</td>'}</tr>`; }
+      tbl.innerHTML = h;
+      const re = sb.ent[readK];
+      renderHex(hex, sb.bytes, (sp, i) => {
+        const r = sb.region[i];
+        if (r.t === 'data') sp.style.background = chunkBg(sel * PER + r.k);
+        if (r.t === 'crc') sp.className = 'crc';
+        if (readStep === 1 && r.t !== 'data') sp.classList.add('hl');
+        if (readStep === 2 && r.t === 'idx' && r.k === readK) sp.classList.add('hl2');
+        if (readStep === 3 && re && r.t === 'data' && r.k === readK) sp.classList.add('hl2');
+      });
+    }
+    // pick + log
+    const pick = $('#sh-pick'); pick.innerHTML = `<span class="small muted">read inner chunk of c/${sel}/0:</span>`;
+    for (let k = 0; k < PER; k++) { const b = document.createElement('button'); b.textContent = ik(k); if (k === readK) b.className = 'on'; b.onclick = () => { readK = k; readStep = 0; render(); }; pick.append(b); }
+    const log = [], key = `sharded/c/${sel}/0`, L = PER * 16 + 4;
+    if (readStep >= 1) log.push(sb ? `① GET ${key}  Range: bytes=-${L}   → last ${L} B = index + CRC (its size is fixed, so no guessing)` : `① GET ${key}  → 404 Not Found: the whole shard is fill_value. Done.`);
+    if (sb && readStep >= 2) { const e = sb.ent[readK]; log.push(`② CRC32C ok · entry ${ik(readK)} = ${e ? `offset ${e[0]}, nbytes ${e[1]}` : '(2⁶⁴−1, 2⁶⁴−1): empty'}`); }
+    if (sb && readStep >= 3) { const e = sb.ent[readK]; log.push(e ? `③ GET ${key}  Range: bytes=${e[0]}-${e[0] + e[1] - 1}   → ${e[1]} B, decode with the inner codecs. Done.` : `③ No second request: the chunk is fill_value (0). Done.`); }
+    $('#sh-log').innerHTML = log.length ? log.map(l => `<div>${l}</div>`).join('') : '<span class="muted">Press Step to read inner chunk ' + ik(readK) + '.</span>';
+    const max = sb ? 3 : 1;
+    $('#sh-step').disabled = readStep >= max;
+  }
+  $('#sh-step').onclick = () => { readStep++; render(); };
+  $('#sh-reset').onclick = () => { readStep = 0; render(); };
+  render();
+})();
+</script>
+</body>
+</html>
