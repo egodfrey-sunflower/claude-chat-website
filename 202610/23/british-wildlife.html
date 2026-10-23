@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wild Britain: flora and fauna of the British Isles</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1f2a1f; --bg: #f6f4ec; --card: #fffdf6; --muted: #66705f; --line: #dcd8c8; --accent: #3f6b35; --accent2: #a8572b; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e7ebe2; --bg: #141813; --card: #1c211b; --muted: #9aa592; --line: #2d352b; --accent: #8fc27f; --accent2: #e19a6b; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.6 Georgia, "Iowan Old Style", serif; }
+  header { padding: 3rem 1.25rem 2rem; text-align: center; border-bottom: 1px solid var(--line);
+    background: radial-gradient(ellipse at top, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%); }
+  header .leaf { font-size: 2.4rem; }
+  h1 { font-size: 2rem; margin: .3rem 0 .4rem; letter-spacing: -.01em; }
+  header p { color: var(--muted); margin: 0 auto; max-width: 32rem; }
+  main { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  h2 { font-size: 1.25rem; margin: 2rem 0 .8rem; color: var(--accent); }
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); }
+  .card { display: block; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 1.1rem 1.2rem; color: inherit; text-decoration: none; transition: transform .15s, border-color .15s; }
+  a.card:hover { transform: translateY(-2px); border-color: var(--accent); }
+  .card .icon { font-size: 1.7rem; }
+  .card h3 { margin: .3rem 0 .3rem; font-size: 1.1rem; }
+  .card p { margin: 0; color: var(--muted); font-size: .95rem; }
+  .soon { opacity: .6; }
+  .tag { display: inline-block; font: 600 .7rem/1 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .06em; padding: .3rem .5rem; border-radius: 99px; background: color-mix(in srgb, var(--accent2) 18%, transparent); color: var(--accent2); margin-top: .6rem; }
+  .facts { list-style: none; padding: 0; margin: 0; }
+  .facts li { padding: .7rem 0; border-top: 1px solid var(--line); }
+  .facts li:last-child { border-bottom: 1px solid var(--line); }
+  footer { text-align: center; color: var(--muted); font: .9rem system-ui, sans-serif; padding: 2rem 1rem 3rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <div class="leaf">🌿🦔🌸</div>
+  <h1>Wild Britain</h1>
+  <p>A field guide to the flora and fauna of the British Isles: the trees, flowers, shrubs and creatures worth stopping for.</p>
+</header>
+<main>
+  <h2>Explore</h2>
+  <div class="grid">
+    <a class="card" href="british-wildlife/plant-glossary.html">
+      <div class="icon">🌳</div>
+      <h3>Glossary of trees, flowers and shrubs</h3>
+      <p>Interesting native and naturalised plants, with how to spot them and the stories behind them.</p>
+      <span class="tag">Being written</span>
+    </a>
+    <div class="card soon">
+      <div class="icon">🦊</div>
+      <h3>Mammals</h3>
+      <p>From pine martens to pipistrelles.</p>
+      <span class="tag">Coming later</span>
+    </div>
+    <div class="card soon">
+      <div class="icon">🐦</div>
+      <h3>Birds</h3>
+      <p>Garden regulars, seabird cliffs and winter visitors.</p>
+      <span class="tag">Coming later</span>
+    </div>
+    <div class="card soon">
+      <div class="icon">🦋</div>
+      <h3>Insects and invertebrates</h3>
+      <p>Butterflies, bees, beetles and things in ponds.</p>
+      <span class="tag">Coming later</span>
+    </div>
+  </div>
+
+  <h2>A few facts to start with</h2>
+  <ul class="facts">
+    <li>Britain has only around <strong>30–35 native tree species</strong>. The ice sheets wiped the slate clean, and rising seas cut the land bridge to Europe about 8,000 years ago before many more could return.</li>
+    <li>The <strong>Fortingall Yew</strong> in Perthshire is among the oldest living things in Europe, perhaps 2,000–3,000 years old or more.</li>
+    <li>Britain holds roughly <strong>half the world's bluebells</strong> (<em>Hyacinthoides non-scripta</em>).</li>
+    <li>The <strong>Scottish wildcat</strong> is Britain's rarest native mammal. Captive-bred cats have been released in the Cairngorms since 2023.</li>
+  </ul>
+</main>
+<footer>
+  Made with Claude, 23 October 2026 · <a href="../../index.html">All pages</a>
+</footer>
+</body>
+</html>
