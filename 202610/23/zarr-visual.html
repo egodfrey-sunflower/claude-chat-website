@@ -138,6 +138,22 @@
   table.cmp { border-collapse: collapse; width: 100%; font-size: .85rem; }
   table.cmp th, table.cmp td { text-align: left; padding: .35rem .4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
   table.cmp td code { font-size: .78rem; }
+  h3.sub { font-size: 1rem; margin: 1.3rem 0 .2rem; }
+  section ul.small { padding-left: 1.1rem; margin: .3rem 0 .8rem; }
+  section ul.small li { margin: .25rem 0; }
+  .hex span.rep { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 2px; }
+  .bits { display: grid; grid-template-columns: repeat(32, minmax(0, 1fr)); gap: 1px; max-width: 440px; margin: .5rem 0 .3rem; font-family: ui-monospace, Menlo, monospace; font-size: .6rem; }
+  .bits span { text-align: center; padding: .2rem 0; border-radius: 2px; }
+  .bits .s, .key.s { background: hsl(0 var(--chunkS) var(--chunkL)); }
+  .bits .e, .key.e { background: hsl(210 var(--chunkS) var(--chunkL)); }
+  .bits .m, .key.m { background: hsl(130 var(--chunkS) var(--chunkL)); }
+  .bits .z { opacity: .3; text-decoration: line-through; }
+  .key { padding: 0 .35em; border-radius: 3px; font-size: .78rem; }
+  .hbar { display: grid; grid-template-columns: 6.4rem minmax(0, 1fr) auto; gap: .5rem; align-items: center; font-size: .8rem; margin: .3rem 0; }
+  .hbar .track { height: .9rem; background: var(--code); border-radius: 4px; overflow: hidden; }
+  .hbar .fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s; }
+  .hbar .v { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: .74rem; }
+  @media (max-width: 420px) { table.cost { font-size: .74rem; } table.cost th, table.cost td { padding: .3rem .25rem; } }
   footer { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 2rem; }
   footer a, section a { color: var(--accent); }
 </style>
@@ -236,9 +252,57 @@
     </div>
   </section>
 
-  <!-- 5. Access pattern -->
+  <!-- 5. Compression -->
+  <section id="compression">
+    <h2><span class="num">5</span>How compression works in Zarr</h2>
+    <p>In Zarr, compression is just one or more <b>bytes → bytes</b> codecs at the end of the chain. A few rules follow from that:</p>
+    <ul class="small">
+      <li><b>Each chunk is compressed on its own.</b> Chunks can be written and read in parallel. The flip side is that you can't read part of a compressed chunk, because element <i>i</i>'s position inside the compressed bytes is unknown. So chunk size sets the minimum read.</li>
+      <li><b>Compressed chunks vary in size.</b> A constant chunk might shrink to a few bytes while a noisy one barely shrinks. The store doesn't care, because each chunk is its own key. Inside a shard, the index records each inner chunk's <code>nbytes</code>. The index itself is never compressed, so its size stays fixed.</li>
+      <li><b>Metadata is never compressed.</b> <code>zarr.json</code> is plain JSON, and missing chunks cost nothing at all.</li>
+      <li><b>Codecs:</b> <code>gzip</code>, <code>zstd</code>, and <code>blosc</code> (a "meta-compressor": it shuffles the data, then runs lz4, zstd, zlib and so on over blocks, multithreaded) are standard. Many more come as <code>numcodecs.*</code> extensions: lz4, bz2, lzma, delta, bitround, quantize and others.</li>
+      <li><b>Defaults:</b> zarr-python 3 uses <code>zstd</code> with no filters. zarr-python 2 defaulted to Blosc with lz4 and byte shuffle. In v2, metadata has one <code>compressor</code> plus a list of <code>filters</code>. In v3 both live in <code>codecs</code>.</li>
+    </ul>
+
+    <h3 class="sub">Why shuffling matters</h3>
+    <p class="small">General-purpose compressors look for repeated byte sequences. In a float32 or int32 array, neighbouring values usually share their high bytes (sign and exponent) but differ in their low bytes. Stored one after another, the bytes interleave stable-noisy-stable-noisy, and there are few repeats. <b>Byte shuffle</b> regroups the data: all the first bytes, then all the second bytes, and so on. <b>Bitshuffle</b> does the same with individual bits. The stable parts become long runs that compress very well.</p>
+    <div class="row">
+      <span class="small muted">data:</span>
+      <button data-d="sine" class="on">smooth sine (f4)</button>
+      <button data-d="temp">noisy temperature (f4)</button>
+      <button data-d="counter">counter (i4)</button>
+      <button data-d="random">random (f4)</button>
+    </div>
+    <div class="small muted" id="cz-vals"></div>
+    <div class="row">
+      <button data-s="none" class="on">noshuffle</button>
+      <button data-s="shuffle">byte shuffle</button>
+      <button data-s="bit">bitshuffle</button>
+    </div>
+    <div class="hex" id="cz-hex"></div>
+    <p class="small muted" id="cz-hexnote"></p>
+    <div class="small muted" style="margin-top:.6rem">The whole array (4,096 values = 16 KiB), gzipped in your browser after each shuffle:</div>
+    <div id="cz-bars"></div>
+
+    <h3 class="sub">Measured with real Zarr codecs</h3>
+    <p class="small muted">Compression ratio (raw ÷ stored) for 65,536 values (256 KiB) in one chunk, written with zarr-python 3.4.1. Higher is better.</p>
+    <div style="overflow-x:auto"><table class="cost" id="cz-meas"></table></div>
+    <p class="small">The pattern holds: without shuffling, Blosc+lz4 gains nothing on these. With shuffling, the counter goes from 1× to 110×, and up to 643× with bitshuffle. Truly random floats don't compress, whatever you do. This is the Blosc config zarr-python writes:</p>
+    <pre>{"name": "blosc", "configuration": {"typesize": 4, "cname": "zstd", "clevel": 5, "shuffle": "bitshuffle", "blocksize": 0}}</pre>
+
+    <h3 class="sub">Going lossy: rounding away noise bits</h3>
+    <p class="small">Noisy measurements carry trailing mantissa bits that are pure noise and never compress. A <code>numcodecs.bitround</code> filter (array → array, so it sits <em>before</em> <code>bytes</code>) rounds each float to <code>keepbits</code> mantissa bits. The zeroed bits then compress to almost nothing. Drag the slider (noisy temperature data):</p>
+    <label class="ctl">keepbits <input type="range" id="cz-kb" min="0" max="23" value="10" style="width:10rem"><output id="cz-kbo"></output></label>
+    <div class="bits" id="cz-bits"></div>
+    <div class="small"><span class="key s">sign</span> <span class="key e">exponent (8)</span> <span class="key m">mantissa (23)</span> <span class="muted">· struck-out bits are rounded to 0</span></div>
+    <dl class="info" id="cz-br"></dl>
+    <div id="cz-brbars"></div>
+    <p class="small muted">Measured in zarr-python with Blosc zstd + bitshuffle: 169,251 B lossless → 62,953 B at keepbits=10 (max error 0.008) → 29,867 B at keepbits=6 (max error 0.125). Codecs: <code>[{"name": "numcodecs.bitround", "configuration": {"keepbits": 10}}, {"name": "bytes", …}, {"name": "blosc", …}]</code></p>
+  </section>
+
+  <!-- 6. Access pattern -->
   <section id="access">
-    <h2><span class="num">5</span>Chunk shape vs. how you read the data</h2>
+    <h2><span class="num">6</span>Chunk shape vs. how you read the data</h2>
     <p>A Zarr reader always fetches <em>whole chunks</em>. Here's a 48 × 48 array of (time × location). The writer chose a chunk shape once, and every reader pays for it. Pick a query and tap the grid to move it. <span style="color:var(--accent)">■</span> elements you want, <span style="background:var(--accent-soft);padding:0 .3em">shaded</span> chunks you have to download.</p>
     <div class="row">
       <span class="small muted">chunking:</span>
@@ -271,9 +335,9 @@
     </div>
   </section>
 
-  <!-- 6. Sharding -->
+  <!-- 7. Sharding -->
   <section id="shard">
-    <h2><span class="num">6</span>Sharding: many chunks in one object</h2>
+    <h2><span class="num">7</span>Sharding: many chunks in one object</h2>
     <p>Lots of tiny chunks means lots of tiny objects, which is slow and expensive on cloud storage. The <code>sharding_indexed</code> codec packs a grid of <em>inner chunks</em> into one stored object (a <em>shard</em>), with an index of <code>(offset, nbytes)</code> pairs at the end. This array is 8 × 8 uint8, with shards of 4 × 8 and inner chunks of 2 × 4. <b>Tap inner chunks</b> to write or erase them, and watch the shard's bytes change.</p>
     <div class="two">
       <div>
@@ -295,19 +359,20 @@
     <div class="row"><button id="sh-step" class="primary">Step ▶</button><button id="sh-reset">Reset</button></div>
   </section>
 
-  <!-- 7. v2 vs v3 -->
+  <!-- 8. v2 vs v3 -->
   <section id="versions">
-    <h2><span class="num">7</span>v2 vs v3 at a glance</h2>
+    <h2><span class="num">8</span>v2 vs v3 at a glance</h2>
     <table class="cmp">
       <tr><th></th><th>Zarr v2</th><th>Zarr v3</th></tr>
       <tr><td>Metadata</td><td><code>.zarray</code>, <code>.zgroup</code>, <code>.zattrs</code></td><td>one <code>zarr.json</code> per node, attributes inline</td></tr>
       <tr><td>Chunk key</td><td><code>0.0</code> (or <code>0/0</code>)</td><td><code>c/0/0</code> (or <code>c.0.0</code>)</td></tr>
       <tr><td>dtype</td><td>NumPy typestr like <code>&lt;i2</code>, byte order built in</td><td><code>int16</code>; byte order is a <code>bytes</code> codec setting</td></tr>
+      <tr><td>Compression</td><td>one <code>compressor</code> (default Blosc lz4)</td><td>any bytes → bytes codecs in <code>codecs</code> (zarr-python default zstd)</td></tr>
       <tr><td>Encoding</td><td><code>filters</code> + one <code>compressor</code>, plus <code>order</code> C/F</td><td>a general <code>codecs</code> chain (with <code>transpose</code> instead of <code>order</code>)</td></tr>
       <tr><td>Sharding</td><td>no</td><td><code>sharding_indexed</code> codec</td></tr>
       <tr><td>Extensions</td><td>ad hoc</td><td>named extension points, with <code>must_understand</code></td></tr>
     </table>
-    <p class="small" style="margin-top:.8rem">Specs: <a href="https://zarr-specs.readthedocs.io/en/latest/v3/core/index.html">v3 core</a> · <a href="https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/index.html">sharding codec</a> · <a href="https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html">v2</a>. The shard bytes in section 6, with only the top-left inner chunk written, match a file written by zarr-python 3.4.1, byte for byte.</p>
+    <p class="small" style="margin-top:.8rem">Specs: <a href="https://zarr-specs.readthedocs.io/en/latest/v3/core/index.html">v3 core</a> · <a href="https://zarr-specs.readthedocs.io/en/latest/v3/codecs/sharding-indexed/index.html">sharding codec</a> · <a href="https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html">v2</a>. The shard bytes in section 7, with only the top-left inner chunk written, match a file written by zarr-python 3.4.1, byte for byte.</p>
   </section>
 
   <footer>Made with Claude, 2026-10-23 · <a href="../../index.html">All pages</a></footer>
@@ -667,7 +732,119 @@ function chunkGrid(host, { R, C, cr, cc, cell, chunk, maxCell = 30 }) {
   makeVals(); compute();
 })();
 
-/* ---------- 5. Access pattern ---------- */
+/* ---------- 5. Compression ---------- */
+(function compression() {
+  const N = 4096, VIEW = 1024; // show 8 values starting here
+  const hasGz = 'CompressionStream' in window;
+  async function gzLen(u8) {
+    if (!hasGz) return null;
+    const s = new Blob([u8]).stream().pipeThrough(new CompressionStream('gzip'));
+    return (await new Response(s).arrayBuffer()).byteLength;
+  }
+  // deterministic RNG so the numbers are stable between visits
+  let seed = 12345;
+  const rand = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
+  const t = i => i * 20 / (N - 1);
+  const DS = {
+    sine: Float32Array.from({ length: N }, (_, i) => Math.sin(t(i))),
+    temp: Float32Array.from({ length: N }, (_, i) => 15 + 5 * Math.sin(t(i)) + gauss() * 0.2),
+    counter: Int32Array.from({ length: N }, (_, i) => i),
+    random: Float32Array.from({ length: N }, () => rand()),
+  };
+  const bytesOf = a => new Uint8Array(a.buffer, a.byteOffset, a.byteLength); // little-endian, like {"endian": "little"}
+
+  function shuffle(u8, s) {
+    const n = u8.length / s, out = new Uint8Array(u8.length);
+    for (let i = 0; i < n; i++) for (let j = 0; j < s; j++) out[j * n + i] = u8[i * s + j];
+    return out;
+  }
+  // conceptual bitshuffle: bit p of every element, packed together, for p = 0 … 8s−1
+  function bitshuffle(u8, s) {
+    const n = u8.length / s, out = new Uint8Array(u8.length);
+    for (let p = 0; p < 8 * s; p++) for (let e = 0; e < n; e++) {
+      if ((u8[e * s + (p >> 3)] >> (p & 7)) & 1) { const k = p * n + e; out[k >> 3] |= 1 << (k & 7); }
+    }
+    return out;
+  }
+  const xform = { none: u => u, shuffle: u => shuffle(u, 4), bit: u => bitshuffle(u, 4) };
+  let ds = 'sine', sh = 'none', token = 0;
+
+  function bars(host, rows, raw) {
+    host.innerHTML = rows.map(([label, n]) => `<div class="hbar"><span>${label}</span><div class="track"><div class="fill" style="width:${n == null ? 0 : Math.min(100, n / raw * 100).toFixed(1)}%"></div></div><span class="v">${n == null ? 'n/a' : `${n.toLocaleString()} B · ${(raw / n).toFixed(raw / n >= 10 ? 0 : 2)}×`}</span></div>`).join('');
+  }
+
+  function view() {
+    const a = DS[ds], win = a.slice(VIEW, VIEW + 8);
+    $('#cz-vals').textContent = `8 neighbouring values: ${[...win].map(v => ds === 'counter' ? v : v.toFixed(4)).join(', ')}`;
+    const u = bytesOf(win), out = xform[sh](u);
+    renderHex($('#cz-hex'), out, (sp, i) => {
+      const src = sh === 'none' ? i % 4 : Math.floor(i / 8); // which byte of the value this came from
+      sp.style.background = `hsl(${[35, 200, 290, 120][src]} var(--chunkS) var(--chunkL))`;
+      if (i && out[i] === out[i - 1]) sp.classList.add('rep');
+    });
+    $('#cz-hexnote').innerHTML = {
+      none: 'As stored by <code>bytes</code> (little-endian). Colours show which byte of each value this is, from byte 0 (low mantissa, noisy) to byte 3 (sign + exponent, stable). The same colours are scattered across the stream. Underlined bytes repeat the byte before them.',
+      shuffle: 'Byte shuffle: all byte-0s, then byte-1s, byte-2s, byte-3s. The stable high bytes now sit next to each other, so the underlined repeats appear.',
+      bit: 'Bitshuffle: byte k holds bit k from each of the 8 values. Bits that are the same in every value give <code>00</code> or <code>ff</code>, and those make long runs.'
+    }[sh];
+  }
+
+  async function sizes() {
+    const my = ++token, u = bytesOf(DS[ds]);
+    const rows = [];
+    for (const [k, label] of [['none', 'noshuffle'], ['shuffle', 'byte shuffle'], ['bit', 'bitshuffle']]) rows.push([`${label} → gzip`, await gzLen(xform[k](u))]);
+    if (my !== token) return;
+    bars($('#cz-bars'), [['raw', u.length], ...rows], u.length);
+  }
+
+  // measured in zarr-python 3.4.1, 65,536 values, one chunk
+  const RAW = 262144;
+  const MEAS = [
+    ['smooth sine f4', [228036, 238156, 262160, 147076, 110177]],
+    ['noisy temp f4', [212997, 220207, 262160, 195284, 169251]],
+    ['counter i4', [90681, 161418, 262160, 2378, 408]],
+    ['random f4', [235407, 234564, 262160, 239020, 214682]],
+  ];
+  $('#cz-meas').innerHTML = '<tr><th>data</th><th>gzip 5</th><th>zstd 3</th><th>blosc lz4</th><th>blosc lz4 + shuffle</th><th>blosc zstd + bitshuffle</th></tr>' +
+    MEAS.map(([n, v]) => `<tr><td>${n}</td>${v.map(x => `<td>${(RAW / x).toFixed(RAW / x >= 10 ? 0 : 2)}×</td>`).join('')}</tr>`).join('');
+
+  // BitRound, as in numcodecs: round-half-to-even on the float32 bit pattern
+  const temp = DS.temp, tempBits = new Uint32Array(temp.buffer);
+  function bitround(kb) {
+    const out = new Uint32Array(tempBits);
+    if (kb >= 23) return out;
+    const m = 23 - kb, mask = (0xFFFFFFFF << m) >>> 0, hq = (1 << (m - 1)) - 1;
+    for (let i = 0; i < out.length; i++) { const b = out[i]; out[i] = ((b + ((b >>> m) & 1) + hq) >>> 0) & mask; }
+    return out;
+  }
+  let brTok = 0;
+  async function br() {
+    const kb = +$('#cz-kb').value; $('#cz-kbo').textContent = kb;
+    const rb = bitround(kb), rf = new Float32Array(rb.buffer);
+    const b = rb[VIEW], host = $('#cz-bits'); host.innerHTML = '';
+    for (let p = 31; p >= 0; p--) {
+      const s = document.createElement('span');
+      s.textContent = (b >>> p) & 1;
+      s.className = p === 31 ? 's' : p >= 23 ? 'e' : 'm';
+      if (p < 23 - kb) s.classList.add('z');
+      host.append(s);
+    }
+    let err = 0; for (let i = 0; i < N; i++) err = Math.max(err, Math.abs(rf[i] - temp[i]));
+    $('#cz-br').innerHTML = `<dt>original</dt><dd>${temp[VIEW].toPrecision(9)}</dd><dt>stored</dt><dd>${rf[VIEW].toPrecision(9)}</dd><dt>max error</dt><dd>${err.toPrecision(3)} <span class="muted">(the noise itself is ±0.2)</span></dd>`;
+    const my = ++brTok;
+    const a = await gzLen(bitshuffle(bytesOf(temp), 4)), c = await gzLen(bitshuffle(new Uint8Array(rb.buffer), 4));
+    if (my !== brTok) return;
+    bars($('#cz-brbars'), [['lossless', a], [`keepbits ${kb}`, c]], N * 4);
+  }
+
+  radio('#compression [data-d]', btn => { ds = btn.dataset.d; view(); sizes(); });
+  radio('#compression [data-s]', btn => { sh = btn.dataset.s; view(); });
+  $('#cz-kb').addEventListener('input', br);
+  view(); sizes(); br();
+})();
+
+/* ---------- 6. Access pattern ---------- */
 (function access() {
   const N = 48, divs = [1, 2, 3, 4, 6, 8, 12, 16, 24, 48];
   let cr = 8, cc = 8, q = 'row', qi = 20, qj = 30;
@@ -733,7 +910,7 @@ function chunkGrid(host, { R, C, cr, cc, cell, chunk, maxCell = 30 }) {
   update();
 })();
 
-/* ---------- 6. Sharding ---------- */
+/* ---------- 7. Sharding ---------- */
 (function shard() {
   const IR = 2, IC = 4, PER = 4, NSH = 2, CHB = IR * IC; // 2 shards (4×8), each 2×2 inner chunks (2×4)
   const EMPTY = 0xFFFFFFFFFFFFFFFFn;
