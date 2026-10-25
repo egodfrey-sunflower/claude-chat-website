@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>London today: Sunday 25 October 2026</title>
+<style>
+  :root { color-scheme: light dark; --fg: #1d1d1f; --bg: #f7f5f0; --card: #fffdf8; --muted: #6b6b70; --line: #e2dfd6; --accent: #b4532a; --chip: #ece8de; --chip-on: #1d1d1f; --chip-on-fg: #fafaf8; --warn: #9a6a00; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #ececec; --bg: #151516; --card: #1d1d1f; --muted: #9a9aa0; --line: #2c2c2e; --accent: #e08a5f; --chip: #2a2a2c; --chip-on: #ececec; --chip-on-fg: #151516; --warn: #e0b04f; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 system-ui, -apple-system, sans-serif; }
+  header { max-width: 44rem; margin: 0 auto; padding: 2rem 1rem .5rem; }
+  h1 { font-size: 1.6rem; margin: 0; letter-spacing: -.01em; }
+  .lede { color: var(--muted); margin: .3rem 0 0; }
+  .now { color: var(--muted); font-size: .9rem; margin: .5rem 0 0; }
+  .picks { max-width: 44rem; margin: 1rem auto 0; padding: 0 1rem; }
+  .picks div { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: .8rem 1rem; }
+  .picks h2 { font-size: .8rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin: 0 0 .4rem; }
+  .picks ul { margin: 0; padding-left: 1.1rem; }
+  .picks li { margin: .25rem 0; }
+  nav { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin-top: 1rem; }
+  .chips { max-width: 44rem; margin: 0 auto; padding: .6rem 1rem; display: flex; flex-wrap: wrap; gap: .4rem; }
+  @media (max-width: 640px) { .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; } .chips::-webkit-scrollbar { display: none; } }
+  .chip { flex: none; font: 600 .85rem/1 system-ui, sans-serif; border: 1px solid var(--line); background: var(--chip); color: var(--fg); padding: .5rem .7rem; border-radius: 99px; cursor: pointer; }
+  .chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-fg); border-color: var(--chip-on); }
+  .chip.small { font-weight: 500; background: transparent; }
+  .chip .n { opacity: .65; font-weight: 500; margin-left: .2rem; }
+  main { max-width: 44rem; margin: 0 auto; padding: .5rem 1rem 3rem; }
+  section { margin-top: 1.4rem; }
+  section[hidden] { display: none; }
+  section h2 { font-size: 1.15rem; margin: 0 0 .5rem; display: flex; align-items: baseline; gap: .5rem; }
+  section h2 .emoji { font-size: 1.2rem; }
+  section > p.note { color: var(--muted); font-size: .9rem; margin: -.3rem 0 .6rem; }
+  .ev { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: .7rem .9rem; margin: .5rem 0; display: grid; grid-template-columns: 4.2rem 1fr; gap: .1rem .8rem; }
+  .ev .t { font-variant-numeric: tabular-nums; font-weight: 650; color: var(--accent); font-size: .95rem; padding-top: .1rem; }
+  .ev .t small { display: block; font-weight: 500; color: var(--muted); font-size: .75rem; }
+  .ev a.title { color: inherit; font-weight: 650; text-decoration: none; }
+  .ev a.title:hover { color: var(--accent); text-decoration: underline; }
+  .ev .where { color: var(--muted); font-size: .9rem; }
+  .ev .desc { font-size: .95rem; margin-top: .15rem; }
+  .tag { display: inline-block; font: 600 .68rem/1 system-ui, sans-serif; text-transform: uppercase; letter-spacing: .05em; padding: .25rem .45rem; border-radius: 99px; margin-left: .3rem; vertical-align: .1rem; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .tag.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .ev.past { opacity: .45; }
+  .ev.past .t::after { content: "started"; display: block; font-size: .7rem; font-weight: 500; color: var(--muted); }
+  body.hide-past .ev.past { display: none; }
+  footer { max-width: 44rem; margin: 0 auto; padding: 1rem 1rem 3rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+  footer a { color: var(--accent); }
+  @media (max-width: 420px) { .ev { grid-template-columns: 3.6rem 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>London today</h1>
+  <p class="lede">What's on, Sunday 25 October 2026. Tap the chips to show or hide each kind of thing.</p>
+  <p class="now" id="now"></p>
+</header>
+
+<div class="picks"><div>
+  <h2>Picks</h2>
+  <ul>
+    <li><b>Wildcard:</b> climb Hackney's oldest building, St Augustine's Tower, open once a month (2–4.30pm, free).</li>
+    <li><b>Big night:</b> the LSO with Pappano and Sheku Kanneh-Mason. Edmund Finnis's Cello Concerto and Bruckner 9 at the Barbican, 7pm.</li>
+    <li><b>Film:</b> <i>Nosferatu</i> with a live score at the Prince Charles Cinema, 5.45pm.</li>
+    <li><b>Laugh:</b> the Comedy Store Players, the long-running Sunday improv show, 7.30pm.</li>
+  </ul>
+</div></div>
+
+<nav><div class="chips" id="chips"></div></nav>
+<main id="main"></main>
+
+<footer>
+  <p>Listings are from venue sites, Bachtrack, Chortle, Songkick, ianVisits, London Cheapo, londontalks.uk and r/LondonSocialClub, gathered on the morning of 25 Oct. Items marked "check" came from web search and may be out of date. Times and availability change, so check before you travel.</p>
+  <p>Made with Claude, 25 October 2026 · <a href="../../index.html">All pages</a></p>
+</footer>
+
+<script>
+const DAY = '2026-10-25';
+const CATS = [
+  ['classical', '🎻', 'Classical & opera'],
+  ['gigs', '🎷', 'Gigs & jazz'],
+  ['clubs', '🪩', 'Clubs'],
+  ['comedy', '🎤', 'Comedy'],
+  ['film', '🎬', 'Film'],
+  ['talks', '📚', 'Talks & books'],
+  ['out', '🗝️', 'Tours, open days & oddities', 'Tours & oddities'],
+  ['last', '⏳', 'Last chance: closing today', 'Last chance'],
+  ['meetups', '👋', 'Meetups'],
+];
+const NOTES = {
+  meetups: 'Posted by members of r/LondonSocialClub. Open the post for details and to say you are coming.',
+  last: 'Exhibitions on their final day.',
+};
+// [cat, time 'HH:MM' or '' , timeNote, title, url, where, desc, tags]
+const BT = 'https://bachtrack.com/concert-event/';
+const EV = [
+  ['classical', '11:30', '', 'Kronberg Academy soloists & Kirill Gerstein', BT + 'soloists-of-the-kronberg-academy-kirill-gerstein-wigmore-hall-25-october-2026/438159', 'Wigmore Hall', 'Morning chamber concert with the young soloists of Germany\'s Kronberg Academy.', []],
+  ['classical', '13:00', '', 'IGF Young Artist Platform: Alexander Krylov & Shubbe Kabanda', BT + 'igf-young-artist-platform-alexander-krylov-and-shubbe-kabanda-kings-place-st-pancras-room-25-october-2026/449268', 'Kings Place, St Pancras Room', 'Young guitarists, part of the London Guitar Festival.', []],
+  ['classical', '14:00', '', 'Jean Rondeau, Nicolas Altstaedt & Thomas Dunford', BT + 'jean-rondeau-nicolas-altstaedt-thomas-dunford-southbank-centre-queen-elizabeth-hall-25-october-2026/439514', 'Queen Elizabeth Hall, Southbank', 'Harpsichord, cello and lute: three star baroque players in French repertoire.', []],
+  ['classical', '14:00', '', 'Stylus Phantasticus: Concerto Copenhagen', BT + 'stylus-phantasticus-concerto-copenhagen-smith-square-hall-25-october-2026/439157', 'Smith Square Hall', 'Lars Ulrik Mortensen directs the wild, improvisatory "fantastic style" of the 17th century.', []],
+  ['classical', '14:00', '', '4.48 Psychosis', 'https://www.rbo.org.uk/tickets-and-events', 'Royal Opera House, Linbury Theatre', 'Philip Venables\' opera of Sarah Kane\'s final play.', []],
+  ['classical', '15:00', '', 'Vivaldi\'s Four Seasons, Royal Northern Sinfonia', BT + 'vivaldis-four-seasons-with-maria-wloszczowska-royal-northern-sinfonia-royal-northern-sinfonia-kings-place-hall-one-25-october-2026/439561', 'Kings Place, Hall One', 'Maria Włoszczowska leads, with Biber, Muffat and Telemann\'s comic Don Quixote suite.', []],
+  ['classical', '16:30', '', 'Dmitri Alexeev piano recital', BT + 'dmitri-alexeev-recital-westminster-cathedral-hall-25-october-2026/449754', 'Westminster Cathedral Hall', 'Russian veteran pianist in a late-afternoon recital.', []],
+  ['classical', '17:00', '', 'Mozart Requiem', BT + 'mozart-requiem-alexandra-palace-theatre-25-october-2026/448767', 'Alexandra Palace Theatre', 'Mozart\'s Requiem in Ally Pally\'s restored Victorian theatre.', []],
+  ['classical', '18:30', '', 'Dvořák Piano Quartet', 'https://www.conwayhall.org.uk/whats-on/', 'Conway Hall, Holborn', 'Sunday Concerts series: Brahms\'s Piano Quartet No. 1 and Dvořák\'s No. 2, from a Czech ensemble allowed to use the composer\'s name.', []],
+  ['classical', '19:00', '', 'LSO, Pappano & Sheku Kanneh-Mason', BT + 'sir-antonio-pappano-sheku-kanneh-mason-london-symphony-orchestra-barbican-hall-25-october-2026/438365', 'Barbican Hall', 'Edmund Finnis\'s Cello Concerto (an LSO co-commission), then Bruckner\'s monumental Ninth.', []],
+  ['classical', '19:00', '', 'Stile Antico: A Renaissance Roadtrip', BT + 'a-renaissance-roadtrip-smith-square-hall-25-october-2026/439158', 'Smith Square Hall', 'Allegri\'s Miserere, Purcell and Palestrina\'s Missa Tu es Petrus, unaccompanied.', []],
+  ['classical', '19:30', '', 'Kronberg soloists & Gerstein: two piano quintets', BT + 'soloists-of-the-kronberg-academy-kirill-gerstein-wigmore-hall-25-october-2026/438160', 'Wigmore Hall', 'Brahms\'s F minor and Dvořák\'s A major piano quintets: two of the great ones.', []],
+  ['classical', '', 'time tbc', 'Always, Already There: Apartment House and Words like Freedom', 'https://www.barbican.org.uk/whats-on?dates%5Bmin%5D=2026-10-25&dates%5Bmax%5D=2026-10-25', 'Barbican', 'A day on Black composers. Apartment House plays Afro-diasporic avant-garde works (a UK first), and Gweneth Ann Rand sings Black art song.', ['Barbican']],
+
+  ['gigs', '12:00', 'lunch', 'Deirdre Cartwright & Alison Rayner: 50 years of music', 'https://www.ronniescotts.co.uk/show-calendar', 'Ronnie Scott\'s', 'Sunday lunch show of music and conversation, £30–45.', ['check']],
+  ['gigs', '18:30', '', 'W3 Funk Sessions', 'https://www.ronniescotts.co.uk/show-calendar', 'Ronnie Scott\'s', 'Funk band with a rotating line-up.', ['check']],
+  ['gigs', '19:00', '+ 21:30', 'Mahalia', 'https://www.bluenotejazz.com/london/shows/?list_view', 'Blue Note London, Covent Garden', 'The Leicester R&B singer in the new Blue Note club.', ['waiting list']],
+  ['gigs', '19:30', '', 'Carl Stone + Excel DJ + Silvia Kastel', 'https://www.cafeoto.co.uk/events/day/2026/10/25', 'Café OTO, Dalston', 'US electronic-music pioneer, known for chopped and looped samples, with two DJs. £15 advance, £17 on the door.', []],
+  ['gigs', '', 'evening', 'Ben Watt & Tracey Thorn', 'https://www.songkick.com/metro-areas/24426-uk-london', 'MOTH Club, Hackney', 'The Everything But The Girl pair, seated, in two sets with a band.', []],
+  ['gigs', '', 'evening', 'Saigon Soul Revival', 'https://thejazzcafe.com/whats-on/', 'Jazz Cafe, Camden', 'Vietnam\'s golden-era 1960s and 70s soul and pop, revived live.', []],
+  ['gigs', '', 'evening', 'Kristin Hersh', 'https://www.songkick.com/metro-areas/24426-uk-london', 'The Lexington, Angel', 'Throwing Muses frontwoman, solo in a small room.', []],
+  ['gigs', '', 'evening', 'Grandmaster Flash', 'https://www.songkick.com/metro-areas/24426-uk-london', '229, Great Portland St', 'Hip-hop pioneer on the decks.', []],
+
+  ['clubs', '23:00', 'to 04:00', 'CAYA by fabric: Ben Murphy all night long', 'https://www.fabriclondon.com/whats-on', 'fabric, Farringdon', 'Fabric\'s Sunday-night session, with one DJ playing the whole night.', []],
+
+  ['comedy', '16:30', '', 'Henning Wehn: Acid Wehn', 'https://www.hackneyempire.co.uk/whats-on', 'Hackney Empire', 'The German comedy ambassador\'s new tour show. £27–31.', []],
+  ['comedy', '18:00', '', 'Sean McLoughlin\'s New Stuff', 'https://www.chortle.co.uk/venues/10/england_london', 'Camden Comedy Club', 'A work-in-progress hour from a sharp stand-up. £6.', []],
+  ['comedy', '19:00', '', 'Austentatious: The Debutante Ball', 'https://www.chortle.co.uk/venues/10/england_london', 'The Free Association', 'The improvised Jane Austen troupe in a special format. From £17.', []],
+  ['comedy', '19:00', '+ 21:00', 'Amy Matthews: Definitions of Toast', 'https://www.chortle.co.uk/venues/10/england_london', 'The Bill Murray, Angel', 'Stand-up in the comedy pub. £15.', []],
+  ['comedy', '19:30', '', 'The Comedy Store Players', 'https://london.thecomedystore.co.uk/whats-on', 'Comedy Store, Leicester Square', 'Sunday improv with Josie Lawrence, Lee Simpson, Richard Vranch and Ruth Bratt. £13.25–25.25.', []],
+  ['comedy', '', 'evening', 'Shazia Mirza', 'https://www.chortle.co.uk/venues/10/england_london', 'The Railway, Streatham', 'Pub-gig chance to see a big name up close. £8–12.', []],
+  ['comedy', '', '', 'Lucy Beaumont: Bad At Quiz Shows, Good With Weirdos', 'https://www.chortle.co.uk/venues/10/england_london', 'Soho Theatre Walthamstow', 'Hull\'s finest surrealist on tour.', []],
+
+  ['film', '', 'mat + eve', 'Frankenstein (1931) with live orchestra', BT + 'frankenstein-1931-royal-philharmonic-orchestra-cadogan-hall-25-october-2026/441706', 'Cadogan Hall, Sloane Square', 'The Royal Philharmonic plays Michael Shapiro\'s score live to the film (its London premiere).', []],
+  ['film', '17:45', '', 'Nosferatu with live score', 'https://princecharlescinema.com/whats-on/', 'Prince Charles Cinema, Leicester Square', 'The 1922 silent vampire classic with live musicians.', []],
+  ['film', '18:05', '', 'The Return of the Living Dead', 'https://princecharlescinema.com/whats-on/', 'Prince Charles Cinema', '1985 punk zombie comedy.', []],
+  ['film', '20:15', '', 'Suspiria (1977)', 'https://princecharlescinema.com/whats-on/', 'Prince Charles Cinema', 'Argento\'s technicolour nightmare on the big screen.', []],
+  ['film', '', 'time tbc', 'Doc\'n Roll: Heaven 17 + ScreenTalk', 'https://www.barbican.org.uk/whats-on?dates%5Bmin%5D=2026-10-25&dates%5Bmax%5D=2026-10-25', 'Barbican Cinema', 'Heaven 17 on what might be their final tour, with a talk afterwards.', ['Barbican']],
+  ['film', '', 'time tbc', 'Members\' Screening: NAZA', 'https://www.barbican.org.uk/whats-on?dates%5Bmin%5D=2026-10-25&dates%5Bmax%5D=2026-10-25', 'Barbican Cinema', 'Yuval Abraham\'s documentary of interviews with Israeli soldiers. A Barbican members\' screening. It also has regular screenings this week.', ['members']],
+
+  ['talks', '14:30', '', 'The Architecture of Bloomsbury', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'City Lit, Holborn', 'Illustrated talk on four centuries of squares and terraces.', ['free']],
+  ['talks', '15:30', '', 'Society of Black Composers and beyond', 'https://www.barbican.org.uk/whats-on?dates%5Bmin%5D=2026-10-25&dates%5Bmax%5D=2026-10-25', 'Barbican', 'Keynote by Dr Harald Kisiedu on Dorothy Rudd Moore, Olly Wilson and the Society of Black Composers.', ['Barbican']],
+  ['talks', '18:00', '', 'Debut London Literature', 'https://www.southbankcentre.co.uk/whats-on/', 'Royal Festival Hall', 'First-time novelists whose books are set in London.', ['check']],
+  ['talks', '19:30', '', 'V. E. Schwab: Victorious', 'https://www.southbankcentre.co.uk/whats-on/', 'Queen Elizabeth Hall', 'The fantasy author on finishing her Villains series.', ['check']],
+  ['talks', '19:30', '', 'Dua Lipa & Patti Smith: Bread of Angels', 'https://www.southbankcentre.co.uk/whats-on/', 'Royal Festival Hall', 'Patti Smith on her memoir, in conversation with Dua Lipa.', ['sold out']],
+
+  ['out', '10:00', 'to 17:00', 'October Steam Up', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'London Museum of Water & Steam, Brentford', 'The giant Victorian pumping engines run under steam. £15.', []],
+  ['out', '11:00', 'to 14:00', 'Coombe Conduit open day', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Norbiton, Kingston', 'Rare look inside a Tudor waterworks that fed Hampton Court Palace.', ['free']],
+  ['out', '', 'daytime', 'Diwali on the Square', 'https://londoncheapo.com/events/', 'Trafalgar Square', 'London\'s big free Diwali celebration: music, dance and food.', ['free']],
+  ['out', '13:00', 'to 15:00', 'Rock \'n\' Roll walking tour of Soho', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Meets in Mayfair', 'The pubs, clubs and studios that made Soho the centre of the music business. £16.75.', []],
+  ['out', '14:00', 'to 16:30', 'St Augustine\'s Tower', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Hackney', 'The oldest building in Hackney. It opens once a month and you can climb to the top.', ['free', 'wildcard']],
+  ['out', '18:30', 'to 20:45', 'Jail Birds of Old London', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Meets at the Old Bailey', 'Evening walk through London\'s crime and punishment, told through its wicked women. £25.', []],
+  ['out', '', 'evening', 'Halloween at Kew', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Kew Gardens', 'After-dark illuminated trail. £24, until 1 Nov.', []],
+  ['out', '10:00', 'to 17:00', 'Hackney Flea Market', 'https://londoncheapo.com/events/', 'Stoke Newington', 'Monthly vintage and secondhand market.', ['free']],
+  ['out', '', 'all day', 'MCM Comic Con (last day)', 'https://londoncheapo.com/events/', 'ExCeL, Royal Docks', 'Cosplay and pop culture. £29–48.', []],
+
+  ['last', '', '', 'Richard Dadd: Beyond Bedlam', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Royal Academy, Piccadilly', 'The Victorian fairy painter who made his strangest work in Bedlam. £17.50.', []],
+  ['last', '', '', 'The Wallace Collection at War', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Wallace Collection, Marylebone', 'How the collection kept culture going in 1942.', ['free']],
+  ['last', '', '', '300 Years of the "Rival Queens": Handel\'s 1726 opera season', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Foundling Museum, Bloomsbury', 'The singers\' feud that gripped Georgian London. £14.50.', []],
+  ['last', '', '', 'Unfinished Business: Turner\'s Margate', 'https://www.ianvisits.co.uk/calendar/date/2026/10/25/', 'Turner\'s House, Twickenham', 'The mystery of a Turner painting and his tangled bequest. £12.', []],
+  ['last', '', '11:00–17:00', 'Parallax Art Fair', 'https://londoncheapo.com/events/', 'Kensington', 'An unjuried art fair, free to enter.', ['free']],
+
+  ['meetups', '12:00', 'onwards', 'Horror movie marathon in King\'s Cross', 'https://www.reddit.com/r/LondonSocialClub/comments/1xep581/25102026_horror_movie_marathon_in_kings_cross/', 'King\'s Cross', 'r/LondonSocialClub meetup.', []],
+  ['meetups', '', '', 'Coffee and stroll on Hampstead Heath', 'https://www.reddit.com/r/LondonSocialClub/comments/1xaus14/251026_coffee_and_stroll_hampstead_heath/', 'Hampstead Heath', 'r/LondonSocialClub meetup.', []],
+  ['meetups', '', '', 'F1 US Grand Prix watchalong', 'https://www.reddit.com/r/LondonSocialClub/comments/1xeyqsw/25102026f1_us_watchalong_at_ealing/', 'Ealing', 'r/LondonSocialClub meetup.', []],
+  ['meetups', '', '', 'Sunday pub quiz at the Canonbury Tavern', 'https://www.reddit.com/r/LondonSocialClub/comments/1xcl228/25102026_sunday_pub_quiz_at_the_canonbury_tavern/', 'Canonbury, Islington', 'Join a team.', []],
+  ['meetups', '', '', 'Quiz at Woolwich Works', 'https://www.reddit.com/r/LondonSocialClub/comments/1xdaa20/25102026woolwich_works_quiz/', 'Woolwich', 'Join a team.', []],
+  ['meetups', '', '', 'Music event launch', 'https://www.reddit.com/r/LondonSocialClub/comments/1xday5a/251026_music_event_launch_brixton/', 'Brixton', 'r/LondonSocialClub post.', []],
+  ['meetups', '', '', 'World of Warcraft at the Royal Albert Hall', 'https://www.reddit.com/r/LondonSocialClub/comments/1x90teg/251026_world_of_warcraft_at_the_royal_albert_hall/', 'Royal Albert Hall', 'Going together to the concert.', []],
+];
+
+const $ = (t, a = {}, ...kids) => { const e = document.createElement(t); for (const [k, v] of Object.entries(a)) k === 'class' ? e.className = v : e.setAttribute(k, v); e.append(...kids); return e; };
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+                set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const KEY = 'london-sunday-cats';
+let on = new Set(store.get(KEY, CATS.map(c => c[0])));
+let hidePast = store.get(KEY + '-hidepast', false);
+
+// London time now: dim events that have already started (only on the day itself)
+const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(p => [p.type, p.value]));
+const today = `${parts.year}-${parts.month}-${parts.day}`, nowHM = `${parts.hour}:${parts.minute}`;
+document.getElementById('now').textContent = today === DAY
+  ? `It's ${nowHM} in London. Events that have already started are faded.`
+  : `This page is for Sunday 25 October 2026.`;
+
+const main = document.getElementById('main'), chips = document.getElementById('chips');
+// untimed items: daytime ones early, evening ones at 8pm, unknown times last
+const sortKey = e => e[1] || ({ even: '19:59', 'mat ': '14:59', dayt: '09:59', 'all ': '09:59' })[e[2].slice(0, 4)] || '99:99';
+for (const [id, emoji, label, short] of CATS) {
+  const evs = EV.filter(e => e[0] === id).sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+  const sec = $('section', { id }, $('h2', {}, $('span', { class: 'emoji' }, emoji), label));
+  if (NOTES[id]) sec.append($('p', { class: 'note' }, NOTES[id]));
+  for (const [, time, tnote, title, url, where, desc, tags] of evs) {
+    const t = $('div', { class: 't' }, time || '');
+    if (tnote) t.append($('small', {}, tnote));
+    const head = $('div', {}, $('a', { class: 'title', href: url, target: '_blank', rel: 'noopener' }, title));
+    for (const tag of tags) head.append($('span', { class: 'tag' + (/sold|wait|check/.test(tag) ? ' warn' : '') }, tag));
+    const ev = $('div', { class: 'ev' }, t, $('div', {}, head, $('div', { class: 'where' }, where), $('div', { class: 'desc' }, desc)));
+    if (today === DAY && time && time <= nowHM && !/^to /.test(tnote)) ev.classList.add('past');
+    sec.append(ev);
+  }
+  main.append(sec);
+  const chip = $('button', { class: 'chip', type: 'button', 'aria-pressed': String(on.has(id)) }, `${emoji} ${short || label}`, $('span', { class: 'n' }, evs.length));
+  chip.onclick = () => { on.has(id) ? on.delete(id) : on.add(id); render(); };
+  chip.dataset.cat = id; chips.append(chip);
+}
+const all = $('button', { class: 'chip small', type: 'button' }, 'All');
+const none = $('button', { class: 'chip small', type: 'button' }, 'None');
+const past = $('button', { class: 'chip small', type: 'button', 'aria-pressed': String(hidePast) }, 'Hide started');
+all.onclick = () => { on = new Set(CATS.map(c => c[0])); render(); };
+none.onclick = () => { on = new Set(); render(); };
+past.onclick = () => { hidePast = !hidePast; render(); };
+chips.append(all, none);
+if (today === DAY) chips.append(past);
+
+function render() {
+  for (const c of chips.querySelectorAll('[data-cat]')) c.setAttribute('aria-pressed', String(on.has(c.dataset.cat)));
+  for (const s of main.querySelectorAll('section')) s.hidden = !on.has(s.id);
+  past.setAttribute('aria-pressed', String(hidePast));
+  document.body.classList.toggle('hide-past', hidePast);
+  store.set(KEY, [...on]); store.set(KEY + '-hidepast', hidePast);
+}
+render();
+</script>
+</body>
+</html>
