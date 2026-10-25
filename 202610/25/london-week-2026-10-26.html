@@ -23,6 +23,8 @@
   .picks ul { margin: 0; padding-left: 1.1rem; } .picks li { margin: .25rem 0; }
   nav { position: sticky; top: 0; z-index: 2; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); margin-top: 1rem; }
   .chips { max-width: 44rem; margin: 0 auto; padding: .6rem 1rem; display: flex; flex-wrap: wrap; gap: .4rem; }
+  #daychips { padding-top: 0; }
+  #daychips .chip { font-size: .8rem; padding: .4rem .6rem; }
   @media (max-width: 640px) { .chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } .chips::-webkit-scrollbar { display: none; } }
   .chip { flex: none; font: 600 .85rem/1 system-ui, sans-serif; border: 1px solid var(--line); background: var(--chip); color: var(--fg); padding: .5rem .7rem; border-radius: 99px; cursor: pointer; }
   .chip[aria-pressed="true"] { background: var(--chip-on); color: var(--chip-on-fg); border-color: var(--chip-on); }
@@ -62,7 +64,7 @@
   <div class="jump" id="jump"></div>
 </header>
 <div class="picks"><div><h2>Picks</h2><ul><li><b>Wed 28 Oct:</b> Colin Currie Group&#x27;s Steve Reich celebration at the Barbican, with the first London performance of Reich&#x27;s new <i>In All Your Ways</i>.</li><li><b>Tue 3 – Thu 5 Nov:</b> Globe Unity Orchestra, Schlippenbach&#x27;s free-jazz big band in its 60th year, crammed into Café OTO.</li><li><b>Mon 26 Oct:</b> the Orchestra of the Age of Enlightenment&#x27;s informal <i>Night Shift</i> in a Camden pub.</li><li><b>Tue 27 Oct:</b> <i>Frankenstein</i> (1931) screened inside the Old Operating Theatre.</li><li><b>At the Globe:</b> <i>Julius Caesar</i> by candlelight in the Sam Wanamaker Playhouse from 6 Nov.</li></ul></div></div>
-<nav><div class="chips" id="chips"></div></nav>
+<nav><div class="chips" id="chips"></div><div class="chips" id="daychips"></div></nav>
 <main id="main"></main>
 <footer>
   <p>Gathered from venue sites, Bachtrack, British Theatre Guide, Chortle, Songkick, DICE, ianVisits, londontalks.uk, London Cheapo, review sites and r/LondonSocialClub. Items tagged "check" came from web search and may be out of date. Times and availability change, so check before you travel.</p>
@@ -77,6 +79,8 @@ const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ==
 const KEY = 'london-week-cats', ALL = [...CATS.map(c => c[0]), 'ongoing'];
 let on = new Set(store.get(KEY, ALL).filter(k => ALL.includes(k)));
 let hidePast = store.get(KEY + '-hidepast', false);
+// days are remembered as hidden dates, so a new week's page starts with every day showing
+let daysOff = new Set(store.get('london-week-days-off', []));
 const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()).map(x => [x.type, x.value]));
 const today = `${p.year}-${p.month}-${p.day}`, nowHM = `${p.hour}:${p.minute}`;
 const live = today >= DATA.start && today <= DATA.end;
@@ -141,14 +145,27 @@ btn('All', () => { on = new Set(ALL); render(); });
 btn('None', () => { on = new Set(); render(); });
 const past = live ? btn('Hide past', () => { hidePast = !hidePast; render(); }) : null;
 
+const daychips = document.getElementById('daychips');
+for (const day of DATA.days) {
+  const chip = $('button', { class: 'chip', type: 'button', 'data-day': day.date }, shortName(day.date));
+  chip.onclick = () => { daysOff.has(day.date) ? daysOff.delete(day.date) : daysOff.add(day.date); render(); };
+  daychips.append(chip);
+}
+const allDays = $('button', { class: 'chip small', type: 'button' }, 'All days');
+allDays.onclick = () => { daysOff = new Set(); render(); };
+daychips.append(allDays);
+
 function render() {
   for (const c of chips.querySelectorAll('[data-cat]')) c.setAttribute('aria-pressed', String(on.has(c.dataset.cat)));
+  for (const c of daychips.querySelectorAll('[data-day]')) c.setAttribute('aria-pressed', String(!daysOff.has(c.dataset.day)));
   for (const g of main.querySelectorAll('.grp[data-cat]')) g.hidden = !on.has(g.dataset.cat);
-  for (const d of main.querySelectorAll('.day:not(#ongoing)')) d.hidden = !d.querySelector('.grp:not([hidden])');
+  for (const d of main.querySelectorAll('.day:not(#ongoing)')) d.hidden = daysOff.has(d.id.slice(1)) || !d.querySelector('.grp:not([hidden])');
+  for (const a of jump.querySelectorAll('a[href^="#d"]')) a.style.opacity = daysOff.has(a.getAttribute('href').slice(2)) ? .4 : 1;
   const og = document.getElementById('ongoing'); if (og) og.hidden = !on.has('ongoing');
   if (past) past.setAttribute('aria-pressed', String(hidePast));
   document.body.classList.toggle('hide-past', hidePast);
   store.set(KEY, [...on]); store.set(KEY + '-hidepast', hidePast);
+  store.set('london-week-days-off', [...daysOff].filter(d => d >= DATA.start && d <= DATA.end));
 }
 render();
 </script>
