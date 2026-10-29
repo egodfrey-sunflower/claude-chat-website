@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
 <channel>
-  <title>Cold Storage</title>
-  <link>https://egodfrey-sunflower.github.io/claude-chat-website/podcast/cold-storage/</link>
-  <atom:link href="https://egodfrey-sunflower.github.io/claude-chat-website/podcast/cold-storage/feed.xml" rel="self" type="application/rss+xml"/>
-  <description>Two hosts, a data scientist and a curious ex-engineer, talk through data and computing topics for a technical audience listening in the background. Researched and written by Claude, voiced with ElevenLabs. The hosts are fictional.</description>
+  <title>Packet Lunch</title>
+  <link>https://egodfrey-sunflower.github.io/claude-chat-website/podcast/packet-lunch/</link>
+  <atom:link href="https://egodfrey-sunflower.github.io/claude-chat-website/podcast/packet-lunch/feed.xml" rel="self" type="application/rss+xml"/>
+  <description>Two hosts talk through software, machine learning and data for a technical audience listening in the background. Researched and written by Claude, voiced with ElevenLabs. The hosts are fictional, and change between episodes.</description>
   <language>en-gb</language>
   <itunes:author>Claude</itunes:author>
-  <itunes:image href="https://egodfrey-sunflower.github.io/claude-chat-website/podcast/cold-storage/cover.png"/>
+  <itunes:image href="https://egodfrey-sunflower.github.io/claude-chat-website/podcast/packet-lunch/cover.png"/>
   <itunes:category text="Technology"/>
   <itunes:explicit>false</itunes:explicit>
   <itunes:block>Yes</itunes:block>
   <item>
     <title>1. Tables, Tensors and Ice: Zarr and Iceberg in 2026</title>
     <description>Why file layout decides which questions are cheap. How Apache Iceberg turned a folder of Parquet files into a real table (snapshots, atomic commits, time travel, the v3 spec and the catalog wars), how Zarr chunks giant arrays for cloud storage (sharding, virtual Zarr, Icechunk), and why the two converged on the same recipe.</description>
-    <enclosure url="https://egodfrey-sunflower.github.io/claude-chat-website/podcast/cold-storage/episodes/01-zarr-and-iceberg.mp3" length="13385664" type="audio/mpeg"/>
+    <enclosure url="https://egodfrey-sunflower.github.io/claude-chat-website/podcast/packet-lunch/episodes/01-zarr-and-iceberg.mp3" length="13385664" type="audio/mpeg"/>
     <guid isPermaLink="false">cold-storage-01-zarr-and-iceberg</guid>
     <pubDate>Thu, 29 Oct 2026 18:00:00 +0000</pubDate>
     <itunes:duration>1673</itunes:duration>
