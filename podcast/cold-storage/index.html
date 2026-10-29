@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cold Storage</title>
+<link rel="alternate" type="application/rss+xml" title="Cold Storage" href="feed.xml">
+<style>
+  :root { color-scheme: light dark; --fg: #1d1d1f; --bg: #fafaf8; --muted: #6b6b70; --line: #e2e2dd; --accent: #1f6f94; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #ececec; --bg: #161617; --muted: #9a9aa0; --line: #2c2c2e; --accent: #7cc0e0; } }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.5 system-ui, -apple-system, sans-serif; }
+  main { max-width: 40rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  img.cover { width: 9rem; height: 9rem; border-radius: .6rem; float: right; margin: 0 0 1rem 1rem; }
+  h1 { margin: 0 0 .5rem; } h2 { font-size: 1.2rem; margin: 0; }
+  .meta, footer { color: var(--muted); font-size: .9rem; }
+  section { clear: both; border-top: 1px solid var(--line); padding: 1.2rem 0; }
+  audio { width: 100%; }
+  code { word-break: break-all; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <img class="cover" src="cover.png" alt="Cold Storage cover art">
+  <h1>Cold Storage</h1>
+  <p>Two hosts, a data scientist and a curious ex-engineer, talk through data and computing topics for a technical audience listening in the background. Researched and written by Claude, voiced with ElevenLabs. The hosts are fictional.</p>
+  <p><strong>Subscribe:</strong> in Pocket Casts, paste the feed URL into the search box. In Apple Podcasts, go to Library, tap ⋯, then Follow a Show by URL.<br>
+  <code>https://egodfrey-sunflower.github.io/claude-chat-website/podcast/cold-storage/feed.xml</code></p>
+  <section>
+    <h2>1. Tables, Tensors and Ice: Zarr and Iceberg in 2026</h2>
+    <p class="meta">2026-10-29 · 27 min</p>
+    <p>Why file layout decides which questions are cheap. How Apache Iceberg turned a folder of Parquet files into a real table (snapshots, atomic commits, time travel, the v3 spec and the catalog wars), how Zarr chunks giant arrays for cloud storage (sharding, virtual Zarr, Icechunk), and why the two converged on the same recipe.</p>
+    <audio controls preload="none" src="episodes/01-zarr-and-iceberg.mp3"></audio>
+  </section>
+  <footer><p>Made with Claude, 2026-10-29. <a href="../../index.html">All pages</a></p></footer>
+</main>
+</body>
+</html>
