@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "01-zarr-and-iceberg",
+    "title": "1. Tables, Tensors and Ice: Zarr and Iceberg in 2026",
+    "description": "Why file layout decides which questions are cheap. How Apache Iceberg turned a folder of Parquet files into a real table (snapshots, atomic commits, time travel, the v3 spec and the catalog wars), how Zarr chunks giant arrays for cloud storage (sharding, virtual Zarr, Icechunk), and why the two converged on the same recipe.",
+    "date": "2026-10-29"
+  },
+  {
+    "slug": "02-where-do-the-tokens-go",
+    "title": "2. Where Do the Tokens Go? How LLM inference works",
+    "description": "What happens between hitting enter and the words coming back, and how serving got here. The decode loop and the memory wall, the KV cache and the race to shrink it (MQA, GQA, MLA, FlashAttention), continuous batching and vLLM's paging, prompt caching, splitting prefill from decode, speculative decoding, quantisation and mixture of experts, sampling and why temperature zero isn't deterministic, and why output tokens cost five times as much as input. New hosts: Kate and Owen.",
+    "date": "2026-10-29T20:30"
+  }
+]
